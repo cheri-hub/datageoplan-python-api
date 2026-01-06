@@ -119,10 +119,14 @@ class Settings(BaseSettings):
     @property
     def cors_origins(self) -> list[str]:
         """Retorna lista de origens CORS."""
-        # Em produção, seria configurável via env var
         if self.is_production:
+            # Em produção, lê de variável de ambiente
+            cors_env = self.model_config.get("env_prefix", "") + "CORS_ORIGINS"
+            origins_str = self.model_extra.get("cors_origins_raw", "")
+            if origins_str:
+                return [origin.strip() for origin in origins_str.split(",")]
             return []
-        return ["*"]
+        return ["http://localhost:3000", "http://localhost:8080"]
 
 
 @lru_cache

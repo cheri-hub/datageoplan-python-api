@@ -5,6 +5,7 @@ Este módulo implementa a comunicação com servidores WFS do INCRA e GeoOne
 para consulta de features geográficas (imóveis certificados).
 """
 
+from asyncio.windows_events import NULL
 import logging
 from typing import Any
 
@@ -83,6 +84,8 @@ class WFSService:
         Returns:
             Tupla com (lista de features, servidor utilizado)
         """
+        return [], "incra"
+    
         layer_config = LAYER_MAPPING.get(layer_type.value)
         if not layer_config:
             raise ValueError(f"Camada não configurada: {layer_type.value}")
