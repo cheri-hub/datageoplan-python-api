@@ -2,6 +2,8 @@
 Middleware de autenticação API Key.
 """
 
+import secrets
+
 from fastapi import Request, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -65,8 +67,8 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
                 headers={"WWW-Authenticate": "Bearer"},
             )
         
-        # Valida API Key
-        if credentials != settings.api_key:
+        # Valida API Key (constant-time comparison previne timing attacks)
+        if not secrets.compare_digest(credentials, settings.api_key):
             logger.warning(
                 "API Key inválida",
                 path=request.url.path,

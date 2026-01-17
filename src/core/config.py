@@ -7,7 +7,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -66,6 +66,29 @@ class Settings(BaseSettings):
     browser_headless: bool = False
     browser_timeout_ms: int = 30000
     
+    @field_validator("api_key", "secret_key")
+    @classmethod
+    def validate_production_keys(cls, v: str, info) -> str:
+        """Valida chaves em produção."""
+        field_name = info.field_name
+        
+        # Aviso para chaves padrão (sempre)
+        if any(pattern in v.lower() for pattern in ["dev-", "change-", "test-", "example"]):
+            import warnings
+            warnings.warn(
+                f"⚠️  {field_name} contém padrão inseguro! "
+                f"Gere uma chave forte: openssl rand -hex 32"
+            )
+        
+        # Em produção, valida força
+        if len(v) < 32:
+            import warnings
+            warnings.warn(
+                f"⚠️  {field_name} muito curta (mínimo 32 caracteres recomendado)!"
+            )
+        
+        return v
+    
     @property
     def base_path(self) -> Path:
         """Caminho base do projeto."""
@@ -118,14 +141,31 @@ class Settings(BaseSettings):
     
     @property
     def cors_origins(self) -> list[str]:
-        """Retorna lista de origens CORS."""
+        """Retorna lista de origens CORS com validação."""
         if self.is_production:
             # Em produção, lê de variável de ambiente
-            cors_env = self.model_config.get("env_prefix", "") + "CORS_ORIGINS"
-            origins_str = self.model_extra.get("cors_origins_raw", "")
-            if origins_str:
-                return [origin.strip() for origin in origins_str.split(",")]
-            return []
+            import os
+            from src.core.logging import get_logger
+            logger = get_logger(__name__)
+            
+            origins_str = os.getenv("CORS_ORIGINS", "")
+            if not origins_str:
+                logger.warning("⚠️  CORS_ORIGINS vazio em produção! API bloqueará todos os clientes.")
+                return []
+            
+            origins = [origin.strip() for origin in origins_str.split(",") if origin.strip()]
+            
+            # Valida cada origem
+            for origin in origins:
+                if origin == "*":
+                    raise ValueError("Wildcard CORS (*) não permitido em produção!")
+                
+                if not origin.startswith(("http://", "https://")):
+                    raise ValueError(f"CORS origin inválido (falta http/https): {origin}")
+            
+            logger.info(f"CORS configurado para: {origins}")
+            return origins
+        
         return ["http://localhost:3000", "http://localhost:8080"]
 
 

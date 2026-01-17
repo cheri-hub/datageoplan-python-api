@@ -23,6 +23,13 @@ export interface LoginResponse {
   session: SessionInfo | null;
 }
 
+// Browser Login (novo sistema para Docker)
+export interface BrowserLoginResponse {
+  auth_token: string;
+  session_id: string;
+  login_url: string;
+}
+
 export interface LogoutResponse {
   success: boolean;
   message: string;

@@ -1,0 +1,57 @@
+# Gov.br Auth API - Docker Compose Produção
+# Deploy no servidor cherihub.cloud
+
+services:
+  api:
+    image: gov-auth-api:latest
+    container_name: gov-auth-api
+    ports:
+      - "8001:8000"  # Porta 8001 no host (8000 já usado pelo sicar)
+    environment:
+      - ENVIRONMENT=production
+      - DEBUG=false
+      - LOG_LEVEL=INFO
+      - LOG_FORMAT=json
+      - HOST=0.0.0.0
+      - PORT=8000
+      - CORS_ORIGINS=https://govauth.cherihub.cloud,https://cherihub.cloud
+      - API_KEY=${API_KEY}
+      - SECRET_KEY=${SECRET_KEY}
+    volumes:
+      # Dados persistentes
+      - /opt/gov-auth/data/sessions:/app/data/sessions
+      - /opt/gov-auth/data/downloads:/app/data/downloads
+      - /opt/gov-auth/data/logs:/app/data/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  frontend:
+    image: gov-auth-frontend:latest
+    container_name: gov-auth-frontend
+    ports:
+      - "3002:80"  # Porta 3002 no host (3000/3001 já usados)
+    environment:
+      - VITE_API_URL=https://govauth.cherihub.cloud/api
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    depends_on:
+      - api

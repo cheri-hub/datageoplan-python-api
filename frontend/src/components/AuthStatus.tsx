@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { CheckCircle, XCircle, Loader2, LogIn, LogOut, RefreshCw } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { CheckCircle, XCircle, Loader2, LogIn, LogOut, RefreshCw, ExternalLink } from 'lucide-react';
 import { authService } from '../services';
 import type { SessionStatus } from '../types';
 
@@ -8,6 +8,9 @@ export function AuthStatus() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loginUrl, setLoginUrl] = useState<string | null>(null);
+  const [waitingForAuth, setWaitingForAuth] = useState(false);
+  const pollingRef = useRef<number | null>(null);
 
   const fetchStatus = async () => {
     try {
@@ -15,6 +18,16 @@ export function AuthStatus() {
       setError(null);
       const data = await authService.getStatus();
       setStatus(data);
+      
+      // Se autenticou, parar polling e limpar loginUrl
+      if (data.authenticated) {
+        setLoginUrl(null);
+        setWaitingForAuth(false);
+        if (pollingRef.current) {
+          clearInterval(pollingRef.current);
+          pollingRef.current = null;
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao verificar status');
     } finally {
@@ -24,16 +37,49 @@ export function AuthStatus() {
 
   useEffect(() => {
     fetchStatus();
+    
+    // Cleanup polling on unmount
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+      }
+    };
   }, []);
 
   const handleLogin = async () => {
     try {
       setActionLoading(true);
       setError(null);
-      await authService.login();
-      await fetchStatus();
+      
+      // 1. Obter URL de login
+      const response = await authService.browserLogin();
+      setLoginUrl(response.login_url);
+      
+      // 2. Abrir em nova aba
+      authService.openLoginWindow(response.login_url);
+      
+      // 3. Iniciar polling para verificar autenticação
+      setWaitingForAuth(true);
+      pollingRef.current = window.setInterval(async () => {
+        try {
+          const statusData = await authService.getStatus();
+          setStatus(statusData);
+          
+          if (statusData.authenticated) {
+            setLoginUrl(null);
+            setWaitingForAuth(false);
+            if (pollingRef.current) {
+              clearInterval(pollingRef.current);
+              pollingRef.current = null;
+            }
+          }
+        } catch (e) {
+          console.error('Polling error:', e);
+        }
+      }, 2000); // Verifica a cada 2 segundos
+      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao fazer login');
+      setError(err instanceof Error ? err.message : 'Erro ao iniciar login');
     } finally {
       setActionLoading(false);
     }
@@ -162,7 +208,7 @@ export function AuthStatus() {
         ) : (
           <button
             onClick={handleLogin}
-            disabled={actionLoading}
+            disabled={actionLoading || waitingForAuth}
             className="btn-primary flex items-center gap-2"
           >
             {actionLoading ? (
@@ -175,9 +221,47 @@ export function AuthStatus() {
         )}
       </div>
 
-      {actionLoading && (
+      {/* Status de aguardando autenticação */}
+      {waitingForAuth && loginUrl && (
+        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+            <span className="font-medium text-blue-800">Aguardando autenticação...</span>
+          </div>
+          <p className="text-sm text-blue-700 mb-3">
+            Uma nova aba foi aberta para login no Gov.br. 
+            Complete a autenticação com seu certificado digital.
+          </p>
+          <div className="flex gap-2">
+            <a
+              href={loginUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+            >
+              <ExternalLink className="w-4 h-4" />
+              Abrir página de login novamente
+            </a>
+            <button
+              onClick={() => {
+                setWaitingForAuth(false);
+                setLoginUrl(null);
+                if (pollingRef.current) {
+                  clearInterval(pollingRef.current);
+                  pollingRef.current = null;
+                }
+              }}
+              className="text-sm text-gray-500 hover:text-gray-700 ml-auto"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {actionLoading && !waitingForAuth && (
         <p className="mt-4 text-sm text-gray-500">
-          ⏳ Uma janela do Chrome será aberta para autenticação com certificado digital...
+          ⏳ Iniciando autenticação...
         </p>
       )}
     </div>

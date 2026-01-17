@@ -401,6 +401,246 @@ namespace SuaApp.Controllers
 
 ---
 
+## Endpoints de Download Direto (NOVO)
+
+### Endpoints Disponíveis
+
+| Endpoint | Método | Descrição | Retorno |
+|----------|--------|-----------|---------|
+| `/api/v1/sigef/arquivo/csv/{codigo}/{tipo}` | GET | Download CSV individual | `text/csv` |
+| `/api/v1/sigef/arquivo/memorial/{codigo}` | GET | Download memorial PDF | `application/pdf` |
+| `/api/v1/sigef/arquivo/todos/{codigo}` | GET | Download ZIP completo | `application/zip` |
+| `/api/v1/sigef/arquivo/lote?codigos=...` | GET | Download em lote | `application/zip` |
+
+### Tipos de CSV
+
+- `parcela`: Dados gerais da parcela
+- `vertice`: Coordenadas dos vértices
+- `limite`: Limites da parcela
+
+---
+
+### Cliente C# para Download Direto
+
+```csharp
+using System.IO.Compression;
+
+namespace GovAuth.Client
+{
+    public partial class GovAuthApiClient
+    {
+        /// <summary>
+        /// Download direto de CSV
+        /// </summary>
+        public async Task<byte[]> DownloadCsvDiretoAsync(string codigo, string tipo)
+        {
+            var response = await _httpClient.GetAsync(
+                $"/api/v1/sigef/arquivo/csv/{codigo}/{tipo}"
+            );
+            
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadAsByteArrayAsync();
+        }
+
+        /// <summary>
+        /// Download direto de CSV e salva em arquivo
+        /// </summary>
+        public async Task<string> DownloadCsvParaArquivoAsync(
+            string codigo, 
+            string tipo, 
+            string diretorioDestino)
+        {
+            var bytes = await DownloadCsvDiretoAsync(codigo, tipo);
+            
+            var nomeArquivo = $"{codigo}_{tipo}.csv";
+            var caminhoCompleto = Path.Combine(diretorioDestino, nomeArquivo);
+            
+            await File.WriteAllBytesAsync(caminhoCompleto, bytes);
+            return caminhoCompleto;
+        }
+
+        /// <summary>
+        /// Download do memorial descritivo (PDF)
+        /// </summary>
+        public async Task<byte[]> DownloadMemorialAsync(string codigo)
+        {
+            var response = await _httpClient.GetAsync(
+                $"/api/v1/sigef/arquivo/memorial/{codigo}"
+            );
+            
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadAsByteArrayAsync();
+        }
+
+        /// <summary>
+        /// Download de todos os arquivos de uma parcela (ZIP)
+        /// </summary>
+        public async Task<byte[]> DownloadTodosArquivosAsync(string codigo)
+        {
+            var response = await _httpClient.GetAsync(
+                $"/api/v1/sigef/arquivo/todos/{codigo}"
+            );
+            
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadAsByteArrayAsync();
+        }
+
+        /// <summary>
+        /// Download e extração de todos os arquivos
+        /// </summary>
+        public async Task<string> DownloadEExtrairTodosAsync(
+            string codigo, 
+            string diretorioDestino)
+        {
+            var zipBytes = await DownloadTodosArquivosAsync(codigo);
+            
+            var pastaDestino = Path.Combine(diretorioDestino, codigo);
+            Directory.CreateDirectory(pastaDestino);
+            
+            using (var zipStream = new MemoryStream(zipBytes))
+            using (var archive = new ZipArchive(zipStream, ZipArchiveMode.Read))
+            {
+                archive.ExtractToDirectory(pastaDestino, overwriteFiles: true);
+            }
+            
+            return pastaDestino;
+        }
+
+        /// <summary>
+        /// Download em lote (múltiplas parcelas)
+        /// </summary>
+        public async Task<byte[]> DownloadLoteAsync(
+            IEnumerable<string> codigos, 
+            IEnumerable<string>? tipos = null)
+        {
+            var codigosParam = string.Join(",", codigos);
+            var url = $"/api/v1/sigef/arquivo/lote?codigos={codigosParam}";
+            
+            if (tipos != null && tipos.Any())
+            {
+                url += $"&tipos={string.Join(",", tipos)}";
+            }
+            
+            var response = await _httpClient.GetAsync(url);
+            response.EnsureSuccessStatusCode();
+            
+            return await response.Content.ReadAsByteArrayAsync();
+        }
+
+        /// <summary>
+        /// Download em lote e extração
+        /// </summary>
+        public async Task<string> DownloadLoteEExtrairAsync(
+            IEnumerable<string> codigos,
+            string diretorioDestino,
+            IEnumerable<string>? tipos = null)
+        {
+            var zipBytes = await DownloadLoteAsync(codigos, tipos);
+            
+            var pastaDestino = Path.Combine(diretorioDestino, "lote_download");
+            Directory.CreateDirectory(pastaDestino);
+            
+            using (var zipStream = new MemoryStream(zipBytes))
+            using (var archive = new ZipArchive(zipStream, ZipArchiveMode.Read))
+            {
+                archive.ExtractToDirectory(pastaDestino, overwriteFiles: true);
+            }
+            
+            return pastaDestino;
+        }
+    }
+}
+```
+
+### Exemplo de Uso Completo
+
+```csharp
+// Configuração
+var client = new GovAuthApiClient("http://localhost:8000", "sua-api-key");
+
+// 1. Download de um CSV específico
+var csvParcela = await client.DownloadCsvDiretoAsync(
+    "a1b2c3d4-e5f6-7890-abcd-ef1234567890", 
+    "parcela"
+);
+File.WriteAllBytes("parcela.csv", csvParcela);
+
+// 2. Download do memorial PDF
+var memorial = await client.DownloadMemorialAsync(
+    "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+);
+File.WriteAllBytes("memorial.pdf", memorial);
+
+// 3. Download de todos os arquivos em ZIP
+var zipCompleto = await client.DownloadTodosArquivosAsync(
+    "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+);
+File.WriteAllBytes("parcela_completa.zip", zipCompleto);
+
+// 4. Download em lote de múltiplas parcelas
+var codigos = new[] {
+    "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+    "c3d4e5f6-a7b8-9012-cdef-123456789012"
+};
+
+var loteZip = await client.DownloadLoteAsync(codigos);
+File.WriteAllBytes("lote_parcelas.zip", loteZip);
+
+// 5. Download e extração automática
+var pastaExtraida = await client.DownloadLoteEExtrairAsync(
+    codigos,
+    @"C:\Downloads\Parcelas"
+);
+Console.WriteLine($"Arquivos extraídos em: {pastaExtraida}");
+```
+
+### Controller ASP.NET Core para Download
+
+```csharp
+[ApiController]
+[Route("api/[controller]")]
+public class DownloadsController : ControllerBase
+{
+    private readonly GovAuthApiClient _client;
+
+    public DownloadsController(GovAuthApiClient client)
+    {
+        _client = client;
+    }
+
+    [HttpGet("csv/{codigo}/{tipo}")]
+    public async Task<IActionResult> DownloadCsv(string codigo, string tipo)
+    {
+        var bytes = await _client.DownloadCsvDiretoAsync(codigo, tipo);
+        return File(bytes, "text/csv", $"{codigo}_{tipo}.csv");
+    }
+
+    [HttpGet("memorial/{codigo}")]
+    public async Task<IActionResult> DownloadMemorial(string codigo)
+    {
+        var bytes = await _client.DownloadMemorialAsync(codigo);
+        return File(bytes, "application/pdf", $"{codigo}_memorial.pdf");
+    }
+
+    [HttpGet("completo/{codigo}")]
+    public async Task<IActionResult> DownloadCompleto(string codigo)
+    {
+        var bytes = await _client.DownloadTodosArquivosAsync(codigo);
+        return File(bytes, "application/zip", $"{codigo}_completo.zip");
+    }
+
+    [HttpPost("lote")]
+    public async Task<IActionResult> DownloadLote([FromBody] string[] codigos)
+    {
+        var bytes = await _client.DownloadLoteAsync(codigos);
+        return File(bytes, "application/zip", $"lote_{codigos.Length}_parcelas.zip");
+    }
+}
+```
+
+---
+
 ## Swagger/OpenAPI
 
 A API expõe documentação OpenAPI em:

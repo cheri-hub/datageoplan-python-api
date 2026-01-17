@@ -1,5 +1,5 @@
 import api from './api';
-import type { SessionStatus, LoginResponse, LogoutResponse } from '../types';
+import type { SessionStatus, LogoutResponse, BrowserLoginResponse } from '../types';
 
 export const authService = {
   /**
@@ -11,12 +11,26 @@ export const authService = {
   },
 
   /**
-   * Inicia login via Gov.br com certificado digital
-   * Abre uma janela do Chrome para seleção do certificado
+   * Inicia login via Gov.br usando browser remoto
+   * Retorna uma URL que o usuário deve abrir no navegador
    */
-  async login(): Promise<LoginResponse> {
-    const response = await api.post<LoginResponse>('/auth/login');
+  async browserLogin(): Promise<BrowserLoginResponse> {
+    const response = await api.post<BrowserLoginResponse>('/auth/browser-login');
     return response.data;
+  },
+
+  /**
+   * Alias para browserLogin (compatibilidade)
+   */
+  async login(): Promise<BrowserLoginResponse> {
+    return this.browserLogin();
+  },
+
+  /**
+   * Abre a URL de login em uma nova aba do navegador
+   */
+  openLoginWindow(loginUrl: string): Window | null {
+    return window.open(loginUrl, '_blank', 'width=800,height=700');
   },
 
   /**
@@ -33,6 +47,20 @@ export const authService = {
   async getSession(): Promise<SessionStatus> {
     const response = await api.get<SessionStatus>('/auth/session');
     return response.data;
+  },
+
+  /**
+   * Polling para verificar se a autenticação foi concluída
+   */
+  async waitForAuth(maxAttempts = 60, intervalMs = 2000): Promise<SessionStatus> {
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise(resolve => setTimeout(resolve, intervalMs));
+      const status = await this.getStatus();
+      if (status.authenticated) {
+        return status;
+      }
+    }
+    throw new Error('Timeout aguardando autenticação');
   },
 };
 

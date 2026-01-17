@@ -5,9 +5,12 @@ Rotas da API para consulta de imóveis INCRA/SIGEF via WFS.
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from fastapi.responses import StreamingResponse
 
+from src.api.v1.dependencies import RequireAPIKey
 from src.api.v1.schemas import (
     BoundingBox,
     ConsultaRequest,
@@ -22,7 +25,8 @@ from src.services.incra_service import IncraService
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/consultar", tags=["Consulta WFS"])
-
+# Rate limiter
+limiter = Limiter(key_func=get_remote_address)
 
 # Dependency para obter serviços
 async def get_wfs_service() -> WFSService:
@@ -42,8 +46,11 @@ async def get_incra_service(
 
 
 @router.post("", response_model=ConsultaResponse, summary="Consultar imóveis por bbox")
+@limiter.limit("20/minute")  # Max 20 consultas por minuto
 async def consultar_imoveis_post(
-    request: ConsultaRequest,
+    request: Request,
+    consulta: ConsultaRequest,
+    _api_key: RequireAPIKey,
     service: Annotated[IncraService, Depends(get_incra_service)]
 ) -> ConsultaResponse:
     """
@@ -87,15 +94,15 @@ async def consultar_imoveis_post(
     incluindo links de download para cada imóvel.
     """
     logger.info(
-        f"Consulta POST recebida: bbox={request.bbox.to_wfs_bbox()}, "
-        f"camada={request.camada.value}, servidor={request.servidor.value}"
+        f"Consulta POST recebida: bbox={consulta.bbox.to_wfs_bbox()}, "
+        f"camada={consulta.camada.value}, servidor={consulta.servidor.value}"
     )
     
     result = await service.consultar_imoveis(
-        bbox=request.bbox,
-        layer_type=request.camada,
-        server_type=request.servidor,
-        limite=request.limite
+        bbox=consulta.bbox,
+        layer_type=consulta.camada,
+        server_type=consulta.servidor,
+        limite=consulta.limite
     )
     
     return result
@@ -107,6 +114,7 @@ async def consultar_imoveis_get(
     y_min: Annotated[float, Query(ge=-90, le=90, description="Latitude mínima")],
     x_max: Annotated[float, Query(ge=-180, le=180, description="Longitude máxima")],
     y_max: Annotated[float, Query(ge=-90, le=90, description="Latitude máxima")],
+    _api_key: RequireAPIKey,
     camada: Annotated[LayerType, Query(description="Tipo de camada")] = LayerType.SIGEF_PARTICULAR,
     servidor: Annotated[ServerType, Query(description="Servidor WFS")] = ServerType.AUTO,
     limite: Annotated[int, Query(ge=1, le=10000, description="Limite de resultados")] = 1000,
@@ -150,6 +158,7 @@ async def consultar_imoveis_get(
 )
 async def consultar_por_bbox_path(
     coords: str,
+    _api_key: RequireAPIKey,
     camada: LayerType = Query(default=LayerType.SIGEF_PARTICULAR),
     servidor: ServerType = Query(default=ServerType.AUTO),
     limite: int = Query(default=1000, ge=1, le=10000),
@@ -204,6 +213,7 @@ async def download_geojson(
     y_min: float = Query(..., ge=-90, le=90),
     x_max: float = Query(..., ge=-180, le=180),
     y_max: float = Query(..., ge=-90, le=90),
+    _api_key: RequireAPIKey = None,
     camada: LayerType = Query(default=LayerType.SIGEF_PARTICULAR),
     servidor: ServerType = Query(default=ServerType.AUTO),
     limite: int = Query(default=1000, ge=1, le=10000),
