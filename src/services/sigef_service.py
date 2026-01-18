@@ -44,17 +44,53 @@ class SigefService:
     
     async def _get_valid_session(self, force_reauth: bool = False) -> Session:
         """Obtém sessão válida ou lança exceção."""
+        # Primeiro tenta carregar sessão existente do repositório
         session = await self.sessions.load_latest()
         
         if not session or not session.is_valid():
-            if self.auth:
-                # Tenta criar nova sessão
-                logger.info("Sessão inválida, criando nova")
-                return await self.auth.get_or_create_session(force_new=True)
+            # Tenta buscar sessão do browser-login
+            from src.infrastructure.browser_auth import BrowserAuthSession
+            browser_auth = BrowserAuthSession()
             
-            raise SessionExpiredError(
-                "Sessão expirada e auto-refresh não está habilitado."
-            )
+            # Procura sessão completa mais recente
+            import json
+            from datetime import datetime
+            latest_session = None
+            latest_time = None
+            
+            for session_file in browser_auth.sessions_dir.glob("*.json"):
+                try:
+                    with open(session_file, "r") as f:
+                        data = json.load(f)
+                    
+                    if data.get("status") == "completed" and data.get("cookies_data"):
+                        created_at = datetime.fromisoformat(data["created_at"])
+                        if latest_time is None or created_at > latest_time:
+                            latest_session = data
+                            latest_time = created_at
+                except Exception:
+                    pass
+            
+            if latest_session and latest_session.get("cookies_data"):
+                # Cria sessão a partir dos cookies do browser-login
+                cookies_data = latest_session["cookies_data"]
+                logger.info("Usando sessão do browser-login")
+                
+                # Cria sessão com os cookies
+                from src.domain.entities import Session
+                session = Session(
+                    id=latest_session.get("session_id", "browser-session"),
+                    govbr_cookies=cookies_data.get("govbr_cookies", {}),
+                    sigef_cookies=cookies_data.get("sigef_cookies", {}),
+                )
+                
+                # Salva no repositório
+                await self.sessions.save(session)
+            else:
+                raise SessionExpiredError(
+                    "Nenhuma sessão autenticada encontrada. "
+                    "Use POST /v1/auth/browser-login para autenticar primeiro."
+                )
         
         # Garante autenticação no SIGEF (ou re-autentica se solicitado)
         if not session.is_sigef_authenticated or force_reauth:
@@ -65,27 +101,23 @@ class SigefService:
         return session
     
     async def _execute_with_reauth(self, operation, *args, **kwargs):
-        """Executa operação e re-autentica se sessão expirou."""
+        """Executa operação e re-autentica no SIGEF se necessário."""
         try:
             session = await self._get_valid_session()
             return await operation(session, *args, **kwargs)
-        except SessionExpiredError as e:
-            # Primeira tentativa: re-autenticar no SIGEF
-            logger.warning("Sessão SIGEF expirada, re-autenticando...")
-            try:
-                session = await self._get_valid_session(force_reauth=True)
-                return await operation(session, *args, **kwargs)
-            except SessionExpiredError:
-                # Segunda tentativa: fazer login Gov.br completo novamente
-                if self.auth:
-                    logger.warning("Re-autenticação SIGEF falhou, fazendo novo login Gov.br...")
-                    # Novo login Gov.br
-                    session = await self.auth.get_or_create_session(force_new=True)
-                    # Também precisa autenticar no SIGEF após novo login Gov.br
-                    session = await self.sigef.authenticate(session)
-                    await self.sessions.save(session)
+        except SessionExpiredError:
+            # Se não há sessão válida, propaga o erro
+            raise
+        except Exception as e:
+            # Tenta re-autenticar no SIGEF se falhou por sessão expirada
+            if "session" in str(e).lower() or "401" in str(e):
+                logger.warning("Possível sessão expirada, tentando re-autenticar...")
+                try:
+                    session = await self._get_valid_session(force_reauth=True)
                     return await operation(session, *args, **kwargs)
-                raise
+                except SessionExpiredError:
+                    raise
+            raise
     
     async def get_parcela_info(self, codigo: str) -> Parcela:
         """
