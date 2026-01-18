@@ -22,6 +22,7 @@ services:
       - /opt/gov-auth/data/sessions:/app/data/sessions
       - /opt/gov-auth/data/downloads:/app/data/downloads
       - /opt/gov-auth/data/logs:/app/data/logs
+      - /opt/gov-auth/data/browser_auth:/app/data/browser_auth
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]

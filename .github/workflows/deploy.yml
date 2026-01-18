@@ -127,9 +127,19 @@ jobs:
           scp -o StrictHostKeyChecking=no docker-compose.prod.yml ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/opt/gov-auth/docker-compose.yml
       
       - name: Deploy on server
+        env:
+          API_KEY: ${{ secrets.API_KEY }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'ENDSSH'
             set -e
+            
+            echo "📁 Criando diretórios com permissões..."
+            mkdir -p /opt/gov-auth/data/sessions
+            mkdir -p /opt/gov-auth/data/downloads
+            mkdir -p /opt/gov-auth/data/logs
+            mkdir -p /opt/gov-auth/data/browser_auth
+            chmod -R 777 /opt/gov-auth/data
             
             echo "📦 Carregando imagens Docker..."
             docker load < /tmp/api-image.tar.gz
@@ -141,6 +151,8 @@ jobs:
             docker compose down || true
             
             echo "🚀 Iniciando novos containers..."
+            export API_KEY="${{ secrets.API_KEY }}"
+            export SECRET_KEY="${{ secrets.SECRET_KEY }}"
             docker compose up -d
             
             echo "🧹 Limpando imagens antigas..."
