@@ -13,14 +13,9 @@ HTML_AUTH_PAGE = """
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Autenticação Gov.br - API Gov-Auth</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
@@ -28,76 +23,231 @@ HTML_AUTH_PAGE = """
             align-items: center;
             padding: 20px;
         }
-        
         .container {
             background: white;
-            border-radius: 8px;
+            border-radius: 12px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-            max-width: 500px;
+            max-width: 600px;
             width: 100%;
             padding: 40px;
         }
-        
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
-            font-size: 24px;
-        }
-        
-        .subtitle {
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 14px;
-        }
-        
+        h1 { color: #333; margin-bottom: 10px; }
+        .subtitle { color: #666; margin-bottom: 30px; }
         .status {
             padding: 15px;
-            border-radius: 4px;
+            border-radius: 8px;
             margin-bottom: 20px;
-            font-size: 14px;
         }
-        
-        .status.info {
-            background: #e3f2fd;
-            color: #1976d2;
-            border-left: 4px solid #1976d2;
-        }
-        
-        .status.success {
-            background: #e8f5e9;
-            color: #388e3c;
-            border-left: 4px solid #388e3c;
-        }
-        
-        .status.error {
-            background: #ffebee;
-            color: #d32f2f;
-            border-left: 4px solid #d32f2f;
-        }
-        
-        .button-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 30px;
-        }
-        
+        .status.info { background: #e3f2fd; color: #1976d2; border-left: 4px solid #1976d2; }
+        .status.success { background: #e8f5e9; color: #388e3c; border-left: 4px solid #388e3c; }
+        .status.error { background: #ffebee; color: #d32f2f; border-left: 4px solid #d32f2f; }
+        .status.warning { background: #fff3e0; color: #f57c00; border-left: 4px solid #f57c00; }
+        .step { padding: 15px; background: #f5f5f5; border-radius: 8px; margin: 15px 0; }
+        .step h3 { color: #333; margin-bottom: 10px; }
+        .step p { color: #666; font-size: 14px; }
+        .step code { background: #e0e0e0; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
         button {
-            flex: 1;
             padding: 12px 24px;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
+            margin: 5px;
+        }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5568d3; }
+        .btn-success { background: #4caf50; color: white; }
+        .btn-secondary { background: #e0e0e0; color: #333; }
+        textarea {
+            width: 100%;
+            height: 120px;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            margin: 10px 0;
+        }
+        .hidden { display: none; }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Autenticação Gov.br</h1>
+        <p class="subtitle">API Gov-Auth - Autenticação via SIGEF</p>
+        
+        <div id="status" class="status info">
+            <strong>Instruções:</strong> Siga os passos abaixo para autenticar.
+        </div>
+        
+        <!-- Step 1: Abrir SIGEF -->
+        <div id="step1" class="step">
+            <h3>Passo 1: Abrir SIGEF e fazer login</h3>
+            <p>Clique no botão abaixo. Uma nova aba será aberta com o SIGEF.</p>
+            <p style="margin-top:10px">Faça login com seu certificado digital Gov.br.</p>
+            <button class="btn-primary" onclick="openSigef()">🌐 Abrir SIGEF</button>
+        </div>
+        
+        <!-- Step 2: Copiar cookies -->
+        <div id="step2" class="step hidden">
+            <h3>Passo 2: Copiar cookies do navegador</h3>
+            <p>Após fazer login no SIGEF:</p>
+            <ol style="margin: 10px 0 10px 20px; color: #666; font-size: 14px;">
+                <li>Pressione <code>F12</code> para abrir DevTools</li>
+                <li>Vá na aba <code>Application</code> (ou <code>Aplicação</code>)</li>
+                <li>No menu lateral, clique em <code>Cookies</code> → <code>https://sigef.incra.gov.br</code></li>
+                <li>Copie os valores dos cookies listados</li>
+            </ol>
+            <p>Ou use o console (F12 → Console) e execute:</p>
+            <code style="display:block; padding:10px; background:#1e1e1e; color:#4ec9b0; border-radius:4px; margin:10px 0;">
+                copy(document.cookie)
+            </code>
+            <p style="margin-top:15px">Cole os cookies aqui:</p>
+            <textarea id="cookiesInput" placeholder="Cole os cookies aqui...&#10;&#10;Formato: cookie1=valor1; cookie2=valor2; ..."></textarea>
+            <button class="btn-success" onclick="submitCookies()">✓ Enviar Cookies</button>
+            <button class="btn-secondary" onclick="skipCookies()">Pular (testar sem cookies)</button>
+        </div>
+        
+        <!-- Step 3: Concluído -->
+        <div id="step3" class="step hidden">
+            <h3>✅ Autenticação Concluída!</h3>
+            <p>Os cookies foram enviados para a API.</p>
+            <p style="margin-top:10px; color:#388e3c;">Você pode fechar esta janela e voltar para o aplicativo.</p>
+        </div>
+        
+        <!-- Loading -->
+        <div id="loading" class="hidden">
+            <div class="spinner"></div>
+            <p style="text-align:center; color:#666;">Enviando dados...</p>
+        </div>
+        
+        <!-- Error -->
+        <div id="errorDiv" class="step hidden">
+            <div class="status error">
+                <strong>❌ Erro</strong>
+                <p id="errorMessage"></p>
+            </div>
+            <button class="btn-secondary" onclick="location.reload()">Tentar Novamente</button>
+        </div>
+    </div>
+    
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const authToken = urlParams.get('token');
+        const apiBase = window.location.origin + '/api';
+        
+        if (!authToken) {
+            showError('Token de autenticação não fornecido na URL');
         }
         
-        .btn-primary {
-            background: #667eea;
-            color: white;
+        function openSigef() {
+            // Abre o SIGEF em nova aba - o usuário fará login lá
+            window.open('https://sigef.incra.gov.br/oauth2/authorization/govbr', '_blank');
+            
+            // Mostra step 2
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('step2').classList.remove('hidden');
+            
+            document.getElementById('status').innerHTML = 
+                '<strong>Aguardando:</strong> Faça login no SIGEF e depois cole os cookies aqui.';
         }
         
-        .btn-primary:hover {
+        async function submitCookies() {
+            const cookiesText = document.getElementById('cookiesInput').value.trim();
+            
+            if (!cookiesText) {
+                alert('Por favor, cole os cookies antes de enviar.');
+                return;
+            }
+            
+            // Parse cookies
+            const cookies = parseCookies(cookiesText);
+            
+            document.getElementById('step2').classList.add('hidden');
+            document.getElementById('loading').classList.remove('hidden');
+            
+            try {
+                const response = await fetch(`${apiBase}/v1/auth/browser-callback`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        auth_token: authToken,
+                        govbr_cookies: cookies,
+                        sigef_cookies: cookies,
+                    })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Erro ao enviar cookies');
+                }
+                
+                // Sucesso!
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('step3').classList.remove('hidden');
+                document.getElementById('status').className = 'status success';
+                document.getElementById('status').innerHTML = 
+                    '<strong>✅ Sucesso!</strong> Autenticação concluída.';
+                
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+        
+        function skipCookies() {
+            // Para teste - envia cookies vazios
+            document.getElementById('cookiesInput').value = 'test=1';
+            submitCookies();
+        }
+        
+        function parseCookies(text) {
+            // Converte string de cookies para array de objetos
+            const cookies = [];
+            
+            // Tenta diferentes formatos
+            if (text.includes('=')) {
+                const pairs = text.split(';');
+                for (const pair of pairs) {
+                    const [name, ...valueParts] = pair.trim().split('=');
+                    if (name) {
+                        cookies.push({
+                            name: name.trim(),
+                            value: valueParts.join('=').trim(),
+                            domain: '.sigef.incra.gov.br',
+                        });
+                    }
+                }
+            }
+            
+            return cookies;
+        }
+        
+        function showError(message) {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('step2').classList.add('hidden');
+            document.getElementById('errorDiv').classList.remove('hidden');
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('status').className = 'status error';
+            document.getElementById('status').innerHTML = '<strong>Erro:</strong> ' + message;
+        }
+    </script>
+</body>
+</html>
+"""
             background: #5568d3;
         }
         
