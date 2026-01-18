@@ -26,12 +26,37 @@ router = APIRouter(prefix="/auth", tags=["Autenticação"])
     "/status",
     response_model=AuthStatusResponse,
     summary="Verifica status de autenticação",
-    description="Retorna se existe uma sessão válida e seus detalhes.",
+    description="""
+    Retorna se existe uma sessão válida e seus detalhes.
+    
+    Se um `token` for fornecido (do browser-login), verifica
+    se a autenticação via browser foi concluída.
+    """,
 )
 async def get_auth_status(
+    token: str | None = None,
     auth_service: AuthService = Depends(get_auth_service),
 ) -> AuthStatusResponse:
     """Verifica status de autenticação."""
+    # Se um token foi fornecido, verifica sessão do browser-login
+    if token:
+        browser_auth = BrowserAuthSession()
+        session_data = browser_auth.get_browser_session(token)
+        
+        if session_data and session_data.get("status") == "completed":
+            return AuthStatusResponse(
+                authenticated=True,
+                session=None,
+                message="Autenticação via browser concluída",
+            )
+        
+        return AuthStatusResponse(
+            authenticated=False,
+            session=None,
+            message="Aguardando autenticação via browser",
+        )
+    
+    # Verifica sessão normal
     is_valid, session = await auth_service.validate_current_session()
     
     if is_valid and session:
