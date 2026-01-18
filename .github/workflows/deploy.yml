@@ -128,15 +128,7 @@ jobs:
       
       - name: Deploy on server
         run: |
-          # Cria arquivo .env com as credenciais
-          echo "API_KEY=${{ secrets.API_KEY }}" > /tmp/gov-auth.env
-          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> /tmp/gov-auth.env
-          
-          # Copia .env para o servidor
-          scp -o StrictHostKeyChecking=no /tmp/gov-auth.env ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/opt/gov-auth/.env
-          rm /tmp/gov-auth.env
-          
-          # Executa deploy
+          # Executa deploy - NÃO sobrescreve .env existente no servidor
           ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'ENDSSH'
             set -e
             
@@ -146,6 +138,16 @@ jobs:
             mkdir -p /opt/gov-auth/data/logs
             mkdir -p /opt/gov-auth/data/browser_auth
             chmod -R 777 /opt/gov-auth/data
+            
+            # Cria .env apenas se não existir
+            if [ ! -f /opt/gov-auth/.env ]; then
+              echo "⚠️  Arquivo .env não encontrado! Criando template..."
+              echo "API_KEY=" > /opt/gov-auth/.env
+              echo "SECRET_KEY=" >> /opt/gov-auth/.env
+              echo "⚠️  ATENÇÃO: Configure as variáveis em /opt/gov-auth/.env"
+            else
+              echo "✅ Arquivo .env já existe, mantendo configuração atual"
+            fi
             chmod 600 /opt/gov-auth/.env
             
             echo "📦 Carregando imagens Docker..."
