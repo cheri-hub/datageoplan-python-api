@@ -145,7 +145,7 @@ File.WriteAllBytes("parcela.csv", bytes);
         version="1.0.0",
         docs_url=None,  # Configuraremos manualmente
         redoc_url=None,  # Configuraremos manualmente
-        openapi_url="/openapi.json",  # Nginx remove /api, então fica /openapi.json
+        openapi_url="openapi.json",  # Caminho relativo para funcionar com proxy
         lifespan=lifespan,
         swagger_ui_parameters={
             "syntaxHighlight.theme": "monokai",
@@ -685,7 +685,7 @@ html, body {
     async def swagger_ui():
         """Swagger UI."""
         return get_swagger_ui_html(
-            openapi_url="/openapi.json",
+            openapi_url="openapi.json",
             title="Gov.br Auth API - Docs",
         )
     
@@ -693,7 +693,7 @@ html, body {
     async def redoc():
         """ReDoc."""
         return get_redoc_html(
-            openapi_url="/openapi.json",
+            openapi_url="openapi.json",
             title="Gov.br Auth API - ReDoc",
         )
     
