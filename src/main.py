@@ -685,7 +685,7 @@ html, body {
     async def swagger_ui():
         """Swagger UI."""
         return get_swagger_ui_html(
-            openapi_url="/api/openapi.json",
+            openapi_url="/openapi.json",
             title="Gov.br Auth API - Docs",
         )
     
@@ -693,7 +693,7 @@ html, body {
     async def redoc():
         """ReDoc."""
         return get_redoc_html(
-            openapi_url="/api/openapi.json",
+            openapi_url="/openapi.json",
             title="Gov.br Auth API - ReDoc",
         )
     
