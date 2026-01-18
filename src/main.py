@@ -145,7 +145,6 @@ File.WriteAllBytes("parcela.csv", bytes);
         version="1.0.0",
         docs_url="/docs",
         redoc_url="/redoc",
-        root_path="/api" if settings.is_production else "",
         lifespan=lifespan,
         swagger_ui_parameters={
             "syntaxHighlight.theme": "monokai",
@@ -203,8 +202,9 @@ File.WriteAllBytes("parcela.csv", bytes);
             },
         )
     
-    # Rotas
-    app.include_router(v1_router, prefix="/api")
+    # Rotas - sem prefix pois Nginx já encaminha /api/v1/... como /api/v1/...
+    # O root_path="/api" cuida da documentação Swagger
+    app.include_router(v1_router)
     
     # Middleware para CSS dark mode no Swagger UI
     from starlette.middleware.base import BaseHTTPMiddleware
