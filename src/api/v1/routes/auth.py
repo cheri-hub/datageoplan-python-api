@@ -9,7 +9,6 @@ from src.api.v1.schemas import (
     AuthStatusResponse,
     BrowserCallbackRequest,
     BrowserLoginResponse,
-    LoginResponse,
     SessionInfoResponse,
 )
 from src.core.exceptions import GovBrError, SessionExpiredError
@@ -210,27 +209,6 @@ async def browser_callback(
         )
 
 
-@router.get(
-    "/login",
-    response_model=BrowserLoginResponse,
-    summary="Inicia autenticação Gov.br",
-    description="Retorna URL de autenticação para o cliente.",
-)
-async def get_login_url(request: Request) -> BrowserLoginResponse:
-    """Alias para /browser-login (GET)."""
-    browser_auth = BrowserAuthSession()
-    session_data = browser_auth.create_browser_session()
-    
-    base_url = str(request.base_url).rstrip("/")
-    login_url = f"{base_url}/auth-browser?token={session_data['auth_token']}"
-    
-    return BrowserLoginResponse(
-        auth_token=session_data["auth_token"],
-        session_id=session_data["session_id"],
-        login_url=login_url,
-    )
-
-
 @router.post(
     "/logout",
     summary="Encerra sessão",
@@ -249,21 +227,3 @@ async def logout(
     """
     await auth_service.logout(session_id)
     return {"message": "Logout realizado com sucesso"}
-
-
-@router.get(
-    "/session",
-    response_model=SessionInfoResponse | None,
-    summary="Obtém informações da sessão",
-    description="Retorna detalhes da sessão atual.",
-)
-async def get_session_info(
-    auth_service: AuthService = Depends(get_auth_service),
-) -> SessionInfoResponse | None:
-    """Retorna informações da sessão atual."""
-    info = await auth_service.get_session_info()
-    
-    if not info:
-        return None
-    
-    return SessionInfoResponse(**info)
