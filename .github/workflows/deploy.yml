@@ -96,7 +96,17 @@ jobs:
       - name: Add host to known_hosts
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+          for i in 1 2 3; do
+            ssh-keyscan -T 30 -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts && break
+            echo "Attempt $i failed, retrying in 10s..."
+            sleep 10
+          done
+          # Verifica se conseguiu adicionar
+          if [ ! -s ~/.ssh/known_hosts ]; then
+            echo "❌ Failed to get host key after 3 attempts"
+            exit 1
+          fi
+          echo "✅ Host key added successfully"
       
       - name: Copy files to server
         run: |

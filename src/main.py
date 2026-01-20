@@ -77,13 +77,13 @@ def create_app() -> FastAPI:
         description="""
 # API Multi-Plataforma para Dados Geoespaciais
 
-API minimalista para integração com SIGEF, SICAR e outras plataformas de dados geoespaciais.
+API para integração com SIGEF e SICAR.
 
 ## 🔐 Autenticação
 
-Bearer Token (API Key):
+Header X-API-Key:
 ```
-Authorization: Bearer sua-api-key
+X-API-Key: sua-api-key
 ```
 
 ## 📋 Endpoints
@@ -102,18 +102,27 @@ Authorization: Bearer sua-api-key
 | GET | `/arquivo/csv/{codigo}/{tipo}` | Download CSV (parcela/vertices/limites) |
 | GET | `/arquivo/todos/{codigo}` | Download ZIP completo |
 
+### SICAR (`/v1/sicar`)
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| POST | `/stream/state` | Download shapefile por estado |
+| POST | `/stream/car` | Download shapefile por CAR |
+| GET | `/info` | Informações dos endpoints |
+
 ## 🚀 Exemplo
 
 ```bash
-# 1. Login
-curl -X POST http://localhost:8000/api/v1/auth/browser-login
+# SIGEF - Download CSV
+curl -o parcela.csv http://localhost:8000/api/v1/sigef/arquivo/csv/{codigo}/parcela \\
+  -H "X-API-Key: sua-api-key"
 
-# 2. Download CSV
-curl -o parcela.csv http://localhost:8000/api/v1/sigef/arquivo/csv/{codigo}/parcela
+# SICAR - Download por estado
+curl -X POST http://localhost:8000/api/v1/sicar/stream/state \\
+  -H "X-API-Key: sua-api-key" \\
+  -H "Content-Type: application/json" \\
+  -d '{"state": "SP", "polygon": "AREA_PROPERTY"}' \\
+  -o SP_AREA_PROPERTY.zip
 ```
-
-## 🔮 Futuras Plataformas
-- **SICAR** - Cadastro Ambiental Rural (planejado)
         """,
         version="1.0.0",
         docs_url=None,  # Configuraremos manualmente
