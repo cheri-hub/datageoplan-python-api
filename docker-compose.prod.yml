@@ -35,24 +35,3 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-
-  frontend:
-    image: datageoplan-frontend:latest
-    container_name: datageoplan-frontend
-    ports:
-      - "3002:80"  # Porta 3002 no host (3000/3001 já usados)
-    environment:
-      - VITE_API_URL=https://govauth.cherihub.cloud/api
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    depends_on:
-      - api
