@@ -41,7 +41,6 @@ class Settings(BaseSettings):
     workers: int = 4
     
     # Security
-    secret_key: str = "change-this-secret-key-in-production"
     access_token_expire_minutes: int = 60
     
     # Gov.br
@@ -66,7 +65,7 @@ class Settings(BaseSettings):
     browser_headless: bool = False
     browser_timeout_ms: int = 30000
     
-    @field_validator("api_key", "secret_key")
+    @field_validator("api_key")
     @classmethod
     def validate_production_keys(cls, v: str, info) -> str:
         """Valida chaves em produção."""

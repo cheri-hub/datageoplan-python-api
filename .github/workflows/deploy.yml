@@ -123,8 +123,7 @@ jobs:
             if [ ! -f /opt/datageoplan-python-api/.env ]; then
               echo "⚠️  Arquivo .env não encontrado! Criando template..."
               echo "API_KEY=" > /opt/datageoplan-python-api/.env
-              echo "SECRET_KEY=" >> /opt/datageoplan-python-api/.env
-              echo "⚠️  ATENÇÃO: Configure as variáveis em /opt/datageoplan-python-api/.env"
+              echo "⚠️  ATENÇÃO: Configure a API_KEY em /opt/datageoplan-python-api/.env"
             else
               echo "✅ Arquivo .env já existe, mantendo configuração atual"
             fi

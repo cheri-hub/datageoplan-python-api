@@ -99,7 +99,6 @@ Edite `.env`:
 
 ```env
 API_KEY=sua-chave-segura-aqui
-SECRET_KEY=outra-chave-segura
 ENVIRONMENT=development
 ```
 
@@ -122,7 +121,6 @@ docker build -t datageoplan-python-api .
 # Run
 docker run -p 8000:8000 \
   -e API_KEY=sua-chave \
-  -e SECRET_KEY=outra-chave \
   datageoplan-python-api
 
 # Docker Compose
