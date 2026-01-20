@@ -88,7 +88,7 @@ X-API-Key: sua-api-key
 
 ## 📋 Endpoints
 
-### Autenticação (`/v1/auth`)
+### Autenticação (`/api/auth`)
 | Método | Endpoint | Descrição |
 |--------|----------|-----------|
 | GET | `/status` | Verifica sessão ativa |
@@ -96,13 +96,13 @@ X-API-Key: sua-api-key
 | POST | `/browser-callback` | Callback após login |
 | POST | `/logout` | Encerra sessão |
 
-### SIGEF (`/v1/sigef`)
+### SIGEF (`/api/sigef`)
 | Método | Endpoint | Descrição |
 |--------|----------|-----------|
 | GET | `/arquivo/csv/{codigo}/{tipo}` | Download CSV (parcela/vertices/limites) |
 | GET | `/arquivo/todos/{codigo}` | Download ZIP completo |
 
-### SICAR (`/v1/sicar`)
+### SICAR (`/api/sicar`)
 | Método | Endpoint | Descrição |
 |--------|----------|-----------|
 | POST | `/stream/state` | Download shapefile por estado |
@@ -113,11 +113,11 @@ X-API-Key: sua-api-key
 
 ```bash
 # SIGEF - Download CSV
-curl -o parcela.csv http://localhost:8000/api/v1/sigef/arquivo/csv/{codigo}/parcela \\
+curl -o parcela.csv http://localhost:8000/api/sigef/arquivo/csv/{codigo}/parcela \\
   -H "X-API-Key: sua-api-key"
 
 # SICAR - Download por estado
-curl -X POST http://localhost:8000/api/v1/sicar/stream/state \\
+curl -X POST http://localhost:8000/api/sicar/stream/state \\
   -H "X-API-Key: sua-api-key" \\
   -H "Content-Type: application/json" \\
   -d '{"state": "SP", "polygon": "AREA_PROPERTY"}' \\
