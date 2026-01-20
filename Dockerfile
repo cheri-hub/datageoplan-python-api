@@ -1,11 +1,11 @@
-# Gov.br Auth API - Docker
+# DataGeoPlan Python API - Docker
 # Build para deploy on-premise
 
 FROM python:3.11-slim
 
 # Metadados
 LABEL maintainer="dev@example.com"
-LABEL description="Gov.br Auth API com integração SIGEF"
+LABEL description="DataGeoPlan Python API - Multi-platform geospatial data"
 LABEL version="1.0.0"
 
 # Variáveis de build

@@ -1,4 +1,4 @@
-# Gov.br Auth API - Docker Compose
+# DataGeoPlan Python API - Docker Compose
 # Configuração para deploy on-premise
 
 services:
@@ -9,7 +9,7 @@ services:
       args:
         ENVIRONMENT: production
         PORT: 8000
-    container_name: gov-auth-api
+    container_name: datageoplan-python-api
     ports:
       - "8000:8000"
     environment:
@@ -39,12 +39,12 @@ services:
       retries: 3
       start_period: 10s
     networks:
-      - gov-auth-network
+      - datageoplan-network
 
   # Opcional: Nginx como reverse proxy
   nginx:
     image: nginx:alpine
-    container_name: gov-auth-nginx
+    container_name: datageoplan-nginx
     ports:
       - "80:80"
       - "443:443"
@@ -55,12 +55,12 @@ services:
       - api
     restart: unless-stopped
     networks:
-      - gov-auth-network
+      - datageoplan-network
     profiles:
       - with-nginx
 
 networks:
-  gov-auth-network:
+  datageoplan-network:
     driver: bridge
 
 volumes:

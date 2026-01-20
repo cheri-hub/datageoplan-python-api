@@ -1,10 +1,10 @@
-# Gov.br Auth API - Docker Compose Produção
+# DataGeoPlan Python API - Docker Compose Produção
 # Deploy no servidor cherihub.cloud
 
 services:
   api:
-    image: gov-auth-api:latest
-    container_name: gov-auth-api
+    image: datageoplan-python-api:latest
+    container_name: datageoplan-python-api
     ports:
       - "8001:8000"  # Porta 8001 no host (8000 já usado pelo sicar)
     environment:
@@ -19,10 +19,10 @@ services:
       - SECRET_KEY=${SECRET_KEY}
     volumes:
       # Dados persistentes
-      - /opt/gov-auth/data/sessions:/app/data/sessions
-      - /opt/gov-auth/data/downloads:/app/data/downloads
-      - /opt/gov-auth/data/logs:/app/data/logs
-      - /opt/gov-auth/data/browser_auth:/app/data/browser_auth
+      - /opt/datageoplan-python-api/data/sessions:/app/data/sessions
+      - /opt/datageoplan-python-api/data/downloads:/app/data/downloads
+      - /opt/datageoplan-python-api/data/logs:/app/data/logs
+      - /opt/datageoplan-python-api/data/browser_auth:/app/data/browser_auth
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -37,8 +37,8 @@ services:
         max-file: "3"
 
   frontend:
-    image: gov-auth-frontend:latest
-    container_name: gov-auth-frontend
+    image: datageoplan-frontend:latest
+    container_name: datageoplan-frontend
     ports:
       - "3002:80"  # Porta 3002 no host (3000/3001 já usados)
     environment:
