@@ -129,7 +129,13 @@ docker compose up -d
 
 ## 🔐 Autenticação
 
-Todas as requisições requerem API Key:
+Todas as requisições requerem API Key (dois formatos aceitos):
+
+```
+X-API-Key: sua-api-key
+```
+
+ou
 
 ```
 Authorization: Bearer sua-api-key
@@ -141,7 +147,7 @@ Authorization: Bearer sua-api-key
 
 ```bash
 curl -X GET "http://localhost:8000/api/v1/sigef/arquivo/csv/999a354b/parcela" \
-  -H "Authorization: Bearer sua-api-key" \
+  -H "X-API-Key: sua-api-key" \
   -o parcela.csv
 ```
 
@@ -149,7 +155,7 @@ curl -X GET "http://localhost:8000/api/v1/sigef/arquivo/csv/999a354b/parcela" \
 
 ```bash
 curl -X POST "http://localhost:8000/api/v1/sicar/stream/state" \
-  -H "Authorization: Bearer sua-api-key" \
+  -H "X-API-Key: sua-api-key" \
   -H "Content-Type: application/json" \
   -d '{"state": "SP", "polygon": "AREA_PROPERTY"}' \
   -o SP_AREA_PROPERTY.zip
@@ -159,7 +165,7 @@ curl -X POST "http://localhost:8000/api/v1/sicar/stream/state" \
 
 ```bash
 curl -X POST "http://localhost:8000/api/v1/sicar/stream/car" \
-  -H "Authorization: Bearer sua-api-key" \
+  -H "X-API-Key: sua-api-key" \
   -H "Content-Type: application/json" \
   -d '{"car_number": "SP-3538709-4861E981046E49BC81720C879459E554"}' \
   -o propriedade.zip
