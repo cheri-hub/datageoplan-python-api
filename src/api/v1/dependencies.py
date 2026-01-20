@@ -10,7 +10,7 @@ from functools import lru_cache
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Security, status
-from fastapi.security import APIKeyHeader, HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.security import APIKeyHeader
 
 from src.core.config import Settings, get_settings
 from src.core.logging import get_logger
@@ -28,19 +28,15 @@ logger = get_logger(__name__)
 
 # Esquemas de autenticação
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
-bearer_scheme = HTTPBearer(auto_error=False)
 
 
 async def verify_api_key(
     api_key: Annotated[str | None, Security(api_key_header)] = None,
-    bearer: Annotated[HTTPAuthorizationCredentials | None, Security(bearer_scheme)] = None,
 ) -> str:
     """
-    Valida API Key via header X-API-Key ou Authorization: Bearer.
+    Valida API Key via header X-API-Key.
     
-    Aceita dois formatos:
-    - Header: X-API-Key: sua-api-key
-    - Header: Authorization: Bearer sua-api-key
+    Header: X-API-Key: sua-api-key
     
     Raises:
         HTTPException: Se API Key inválida ou ausente
@@ -54,31 +50,22 @@ async def verify_api_key(
     if settings.is_development:
         return "dev-mode"
     
-    # Extrai API Key do header apropriado
-    provided_key = None
-    
-    if api_key:
-        provided_key = api_key
-    elif bearer and bearer.credentials:
-        provided_key = bearer.credentials
-    
-    if not provided_key:
+    if not api_key:
         logger.warning("Requisição sem API Key")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="API Key não fornecida. Use header 'X-API-Key' ou 'Authorization: Bearer <key>'",
-            headers={"WWW-Authenticate": "Bearer"},
+            detail="API Key não fornecida. Use header 'X-API-Key'",
         )
     
     # Valida API Key (constant-time comparison previne timing attacks)
-    if not secrets.compare_digest(provided_key, settings.api_key):
+    if not secrets.compare_digest(api_key, settings.api_key):
         logger.warning("API Key inválida fornecida")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="API Key inválida",
         )
     
-    return provided_key
+    return api_key
 
 
 # Type alias para uso nos endpoints

@@ -129,16 +129,10 @@ docker compose up -d
 
 ## 🔐 Autenticação
 
-Todas as requisições requerem API Key (dois formatos aceitos):
+Todas as requisições requerem API Key no header:
 
 ```
 X-API-Key: sua-api-key
-```
-
-ou
-
-```
-Authorization: Bearer sua-api-key
 ```
 
 ## 📋 Exemplos de Uso
