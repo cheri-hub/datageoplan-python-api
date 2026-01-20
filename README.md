@@ -39,14 +39,22 @@ API unificada para integração com sistemas de dados geoespaciais brasileiros.
 
 ## 🚀 Deploy com Docker
 
-### 1. Clone o Repositório
+### 🐳 Imagem Docker
+
+A imagem está disponível no GitHub Container Registry:
+
+```bash
+docker pull ghcr.io/cheri-hub/datageoplan-python-api:latest
+```
+
+### 1. Clone o Repositório (opcional - só se for fazer build local)
 
 ```bash
 git clone https://github.com/cheri-hub/datageoplan-python-api.git
 cd datageoplan-python-api
 ```
 
-### 2. Build da Imagem
+### 2. Build da Imagem (opcional)
 
 ```bash
 docker build -t datageoplan-python-api:latest .
