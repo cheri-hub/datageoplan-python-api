@@ -11,7 +11,7 @@ API unificada para integração com sistemas de dados geoespaciais brasileiros.
 
 ## 📡 Endpoints Disponíveis
 
-### Autenticação (`/api/v1/auth`)
+### Autenticação (`/api/auth`)
 
 | Método | Endpoint | Descrição |
 |--------|----------|-----------|
@@ -20,14 +20,14 @@ API unificada para integração com sistemas de dados geoespaciais brasileiros.
 | `POST` | `/browser-callback` | Recebe dados de autenticação |
 | `POST` | `/logout` | Encerra sessão |
 
-### SIGEF (`/api/v1/sigef`)
+### SIGEF (`/api/sigef`)
 
 | Método | Endpoint | Descrição |
 |--------|----------|-----------|
 | `GET` | `/arquivo/csv/{codigo}/{tipo}` | Download CSV (parcela/vertice/limite) |
 | `GET` | `/arquivo/todos/{codigo}` | Download ZIP com todos os arquivos |
 
-### SICAR (`/api/v1/sicar`)
+### SICAR (`/api/sicar`)
 
 | Método | Endpoint | Descrição |
 |--------|----------|-----------|
@@ -138,7 +138,7 @@ curl http://localhost:8001/health
 ### SIGEF - Download CSV
 
 ```bash
-curl -X GET "http://localhost:8001/api/v1/sigef/arquivo/csv/999a354b/parcela" \
+curl -X GET "http://localhost:8001/api/sigef/arquivo/csv/999a354b/parcela" \
   -H "X-API-Key: sua-api-key" \
   -o parcela.csv
 ```
@@ -146,7 +146,7 @@ curl -X GET "http://localhost:8001/api/v1/sigef/arquivo/csv/999a354b/parcela" \
 ### SICAR - Download por Estado
 
 ```bash
-curl -X POST "http://localhost:8001/api/v1/sicar/stream/state" \
+curl -X POST "http://localhost:8001/api/sicar/stream/state" \
   -H "X-API-Key: sua-api-key" \
   -H "Content-Type: application/json" \
   -d '{"state": "SP", "polygon": "AREA_PROPERTY"}' \
@@ -156,7 +156,7 @@ curl -X POST "http://localhost:8001/api/v1/sicar/stream/state" \
 ### SICAR - Download por CAR
 
 ```bash
-curl -X POST "http://localhost:8001/api/v1/sicar/stream/car" \
+curl -X POST "http://localhost:8001/api/sicar/stream/car" \
   -H "X-API-Key: sua-api-key" \
   -H "Content-Type: application/json" \
   -d '{"car_number": "SP-3538709-4861E981046E49BC81720C879459E554"}' \

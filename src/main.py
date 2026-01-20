@@ -180,9 +180,8 @@ curl -X POST http://localhost:8000/api/v1/sicar/stream/state \\
             },
         )
     
-    # Rotas - sem prefix pois Nginx já encaminha /api/v1/... como /api/v1/...
-    # O root_path="/api" cuida da documentação Swagger
-    app.include_router(v1_router)
+    # Rotas da API
+    app.include_router(v1_router, prefix="/api")
     
     # Middleware para CSS dark mode no Swagger UI
     from starlette.middleware.base import BaseHTTPMiddleware
@@ -695,11 +694,11 @@ html, body {
     async def root():
         """Informações da API."""
         return {
-            "name": "Gov.br Auth API",
+            "name": "DataGeoPlan Python API",
             "version": "1.0.0",
-            "docs": "/docs" if settings.debug else "Disabled in production",
+            "docs": "/docs",
             "health": "/health",
-            "api": "/api/v1",
+            "api": "/api",
         }
     
     return app
