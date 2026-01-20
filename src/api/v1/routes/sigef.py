@@ -30,7 +30,6 @@ router = APIRouter(prefix="/sigef", tags=["SIGEF"])
 
 @router.get(
     "/arquivo/csv/{codigo}/{tipo}",
-    tags=["Download Direto"],
     summary="📄 Download direto de CSV",
     description="""
 Download de arquivo CSV da parcela SIGEF.
@@ -98,7 +97,6 @@ async def download_csv_arquivo(
 
 @router.get(
     "/arquivo/todos/{codigo}",
-    tags=["Download Direto"],
     summary="📦 Download completo (ZIP com todos arquivos)",
     description="""
 Download de todos os arquivos da parcela em um único ZIP.
