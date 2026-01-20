@@ -11,7 +11,7 @@ API unificada para integração com sistemas de dados geoespaciais brasileiros.
 
 ## 📡 Endpoints Disponíveis
 
-### Autenticação (`/v1/auth`)
+### Autenticação (`/api/v1/auth`)
 
 | Método | Endpoint | Descrição |
 |--------|----------|-----------|
@@ -20,14 +20,14 @@ API unificada para integração com sistemas de dados geoespaciais brasileiros.
 | `POST` | `/browser-callback` | Recebe dados de autenticação |
 | `POST` | `/logout` | Encerra sessão |
 
-### SIGEF (`/v1/sigef`)
+### SIGEF (`/api/v1/sigef`)
 
 | Método | Endpoint | Descrição |
 |--------|----------|-----------|
 | `GET` | `/arquivo/csv/{codigo}/{tipo}` | Download CSV (parcela/vertice/limite) |
 | `GET` | `/arquivo/todos/{codigo}` | Download ZIP com todos os arquivos |
 
-### SICAR (`/v1/sicar`)
+### SICAR (`/api/v1/sicar`)
 
 | Método | Endpoint | Descrição |
 |--------|----------|-----------|
@@ -35,97 +35,87 @@ API unificada para integração com sistemas de dados geoespaciais brasileiros.
 | `POST` | `/stream/car` | Download shapefile por número CAR |
 | `GET` | `/info` | Informações dos endpoints SICAR |
 
-## 📁 Estrutura do Projeto
+---
 
-```
-datageoplan-python-api/
-├── src/
-│   ├── api/
-│   │   ├── middleware/          # Auth, Rate Limit, Security
-│   │   └── v1/
-│   │       └── routes/
-│   │           ├── auth.py      # Endpoints de autenticação
-│   │           ├── sigef.py     # Endpoints SIGEF
-│   │           └── sicar.py     # Endpoints SICAR
-│   ├── core/                    # Config, Logging, Exceptions
-│   ├── domain/                  # Entidades
-│   ├── infrastructure/
-│   │   ├── govbr/               # Autenticador Gov.br
-│   │   ├── sigef/               # Cliente SIGEF
-│   │   └── sicar_package/       # Cliente SICAR
-│   ├── services/                # Services layer
-│   └── main.py                  # FastAPI app
-├── Dockerfile
-├── docker-compose.yml
-├── docker-compose.prod.yml
-├── requirements.txt
-└── .env.example
-```
+## 🚀 Deploy com Docker
 
-## 🚀 Quick Start
-
-### Requisitos
-
-- Python 3.11+
-- Google Chrome (para SIGEF)
-- Tesseract OCR (para SICAR)
-
-### Instalação Local
+### 1. Clone o Repositório
 
 ```bash
-# Clone o repositório
 git clone https://github.com/cheri-hub/datageoplan-python-api.git
 cd datageoplan-python-api
-
-# Crie ambiente virtual
-python -m venv .venv
-.venv\Scripts\activate  # Windows
-source .venv/bin/activate  # Linux/Mac
-
-# Instale dependências
-pip install -r requirements.txt
-
-# Instale Playwright browsers (para SIGEF)
-playwright install chromium
 ```
 
-### Configuração
+### 2. Build da Imagem
+
+```bash
+docker build -t datageoplan-python-api:latest .
+```
+
+### 3. Configuração
+
+Crie o arquivo `.env`:
 
 ```bash
 cp .env.example .env
 ```
 
-Edite `.env`:
+Edite o `.env` com suas configurações:
 
 ```env
-API_KEY=sua-chave-segura-aqui
-ENVIRONMENT=development
+# ============== Ambiente ==============
+ENVIRONMENT=production
+DEBUG=false
+LOG_LEVEL=INFO
+
+# ============== Servidor ==============
+HOST=0.0.0.0
+PORT=8000
+
+# ============== Segurança ==============
+# API Key (OBRIGATÓRIO - mínimo 32 caracteres)
+# Gerar: openssl rand -base64 32
+API_KEY=sua-chave-segura-aqui-minimo-32-chars
+
+# ============== SICAR ==============
+# Driver OCR: tesseract (padrão) ou paddle
+SICAR_DRIVER=tesseract
 ```
 
-### Executar
+### 4. Executar Container
+
+**Opção A - Docker Run:**
 
 ```bash
-# Desenvolvimento
-python -m uvicorn src.main:app --reload --port 8000
-
-# Produção
-python -m uvicorn src.main:app --host 0.0.0.0 --port 8000
+docker run -d \
+  --name datageoplan-python-api \
+  --restart unless-stopped \
+  -p 8001:8000 \
+  -v $(pwd)/data:/app/data \
+  --env-file .env \
+  datageoplan-python-api:latest
 ```
 
-### Docker
+**Opção B - Docker Compose (recomendado):**
 
 ```bash
-# Build
-docker build -t datageoplan-python-api .
-
-# Run
-docker run -p 8000:8000 \
-  -e API_KEY=sua-chave \
-  datageoplan-python-api
-
-# Docker Compose
-docker compose up -d
+docker compose -f docker-compose.prod.yml up -d
 ```
+
+### 5. Verificar
+
+```bash
+# Status do container
+docker ps | grep datageoplan
+
+# Logs
+docker logs datageoplan-python-api -f
+
+# Health check
+curl http://localhost:8001/health
+```
+
+---
 
 ## 🔐 Autenticação
 
@@ -135,12 +125,20 @@ Todas as requisições requerem API Key no header:
 X-API-Key: sua-api-key
 ```
 
+---
+
 ## 📋 Exemplos de Uso
+
+### Health Check
+
+```bash
+curl http://localhost:8001/health
+```
 
 ### SIGEF - Download CSV
 
 ```bash
-curl -X GET "http://localhost:8000/api/v1/sigef/arquivo/csv/999a354b/parcela" \
+curl -X GET "http://localhost:8001/api/v1/sigef/arquivo/csv/999a354b/parcela" \
   -H "X-API-Key: sua-api-key" \
   -o parcela.csv
 ```
@@ -148,7 +146,7 @@ curl -X GET "http://localhost:8000/api/v1/sigef/arquivo/csv/999a354b/parcela" \
 ### SICAR - Download por Estado
 
 ```bash
-curl -X POST "http://localhost:8000/api/v1/sicar/stream/state" \
+curl -X POST "http://localhost:8001/api/v1/sicar/stream/state" \
   -H "X-API-Key: sua-api-key" \
   -H "Content-Type: application/json" \
   -d '{"state": "SP", "polygon": "AREA_PROPERTY"}' \
@@ -158,31 +156,41 @@ curl -X POST "http://localhost:8000/api/v1/sicar/stream/state" \
 ### SICAR - Download por CAR
 
 ```bash
-curl -X POST "http://localhost:8000/api/v1/sicar/stream/car" \
+curl -X POST "http://localhost:8001/api/v1/sicar/stream/car" \
   -H "X-API-Key: sua-api-key" \
   -H "Content-Type: application/json" \
   -d '{"car_number": "SP-3538709-4861E981046E49BC81720C879459E554"}' \
   -o propriedade.zip
 ```
 
+---
+
 ## ⚠️ Notas Importantes
 
 ### SICAR
 - Downloads podem demorar **10-60 segundos** devido à resolução de captcha
 - Configure timeout de **2 minutos** no cliente
-- Requer Tesseract OCR instalado no servidor
+- Tesseract OCR já está incluído na imagem Docker
 
 ### SIGEF
 - Requer autenticação Gov.br via certificado digital
 - Use o fluxo `browser-login` → `browser-callback`
 
-## 📦 Clientes
+### Portas
+- Container interno: `8000`
+- Porta externa padrão: `8001`
 
-- **C# Client**: https://github.com/cheri-hub/sigef-client
+---
 
 ## 📚 Documentação
 
-Acesse `/docs` para a documentação Swagger interativa.
+Acesse `/docs` para a documentação Swagger interativa:
+
+```
+http://localhost:8001/docs
+```
+
+---
 
 ## 📄 Licença
 
