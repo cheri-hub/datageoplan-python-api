@@ -1,5 +1,6 @@
 # DataGeoPlan Python API - Docker Compose
 # Configuração para deploy on-premise
+# Suporta: SIGEF + SICAR
 
 services:
   api:
@@ -19,18 +20,18 @@ services:
       - LOG_FORMAT=json
       - HOST=0.0.0.0
       - PORT=8000
-      # Configurar em produção:
+      # Segurança (configurar em produção):
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
       - API_KEY=${API_KEY:-change-this-in-production}
       - SECRET_KEY=${SECRET_KEY:-change-this-in-production}
+      # SICAR
+      - SICAR_DRIVER=${SICAR_DRIVER:-tesseract}
     volumes:
       # Dados persistentes
       - ./data/sessions:/app/data/sessions
       - ./data/downloads:/app/data/downloads
       - ./data/logs:/app/data/logs
-      # Para usar Chrome do host com certificado:
-      # - /usr/bin/google-chrome:/usr/bin/google-chrome:ro
-      # - ~/.pki:/home/appuser/.pki:ro
+      - ./data/browser_auth:/app/data/browser_auth
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]

@@ -1,12 +1,13 @@
 # DataGeoPlan Python API - Docker Compose Produção
 # Deploy no servidor cherihub.cloud
+# Suporta: SIGEF + SICAR
 
 services:
   api:
     image: datageoplan-python-api:latest
     container_name: datageoplan-python-api
     ports:
-      - "8001:8000"  # Porta 8001 no host (8000 já usado pelo sicar)
+      - "8001:8000"
     environment:
       - ENVIRONMENT=production
       - DEBUG=false
@@ -14,9 +15,11 @@ services:
       - LOG_FORMAT=json
       - HOST=0.0.0.0
       - PORT=8000
-      - CORS_ORIGINS=https://govauth.cherihub.cloud,https://cherihub.cloud
+      - CORS_ORIGINS=https://cherihub.cloud,https://datageoplan.cherihub.cloud
       - API_KEY=${API_KEY}
       - SECRET_KEY=${SECRET_KEY}
+      # SICAR
+      - SICAR_DRIVER=tesseract
     volumes:
       # Dados persistentes
       - /opt/datageoplan-python-api/data/sessions:/app/data/sessions
