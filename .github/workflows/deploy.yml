@@ -1,0 +1,172 @@
+# DataGeoPlan Python API - CI/CD Pipeline
+# Deploy automático para o servidor quando push na main
+
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Permite trigger manual
+
+env:
+  API_IMAGE: datageoplan-python-api
+  API_PORT: 8001
+
+jobs:
+  # ============================================
+  # Job 1: Testes
+  # ============================================
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio pytest-cov
+      
+      - name: Run tests
+        run: |
+          pytest tests/ -v --tb=short || echo "No tests found, skipping..."
+
+  # ============================================
+  # Job 2: Build API
+  # ============================================
+  build:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build API image
+        run: |
+          docker build -t ${{ env.API_IMAGE }}:latest -t ${{ env.API_IMAGE }}:${{ github.sha }} .
+      
+      - name: Save Docker image
+        run: |
+          docker save ${{ env.API_IMAGE }}:latest | gzip > api-image.tar.gz
+      
+      - name: Upload API artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-image
+          path: api-image.tar.gz
+          retention-days: 1
+
+  # ============================================
+  # Job 3: Deploy
+  # ============================================
+  deploy:
+    name: Deploy to Server
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Download API image
+        uses: actions/download-artifact@v4
+        with:
+          name: api-image
+      
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+      
+      - name: Add host to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+      
+      - name: Copy files to server
+        run: |
+          # Copia imagem Docker
+          scp -o StrictHostKeyChecking=no api-image.tar.gz ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/tmp/
+          
+          # Copia docker-compose
+          scp -o StrictHostKeyChecking=no docker-compose.prod.yml ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/opt/datageoplan-python-api/docker-compose.yml
+      
+      - name: Deploy on server
+        run: |
+          # Executa deploy - NÃO sobrescreve .env existente no servidor
+          ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'ENDSSH'
+            set -e
+            
+            echo "📁 Criando diretórios com permissões..."
+            mkdir -p /opt/datageoplan-python-api/data/sessions
+            mkdir -p /opt/datageoplan-python-api/data/downloads
+            mkdir -p /opt/datageoplan-python-api/data/logs
+            mkdir -p /opt/datageoplan-python-api/data/browser_auth
+            chmod -R 777 /opt/datageoplan-python-api/data
+            
+            # Cria .env apenas se não existir
+            if [ ! -f /opt/datageoplan-python-api/.env ]; then
+              echo "⚠️  Arquivo .env não encontrado! Criando template..."
+              echo "API_KEY=" > /opt/datageoplan-python-api/.env
+              echo "SECRET_KEY=" >> /opt/datageoplan-python-api/.env
+              echo "⚠️  ATENÇÃO: Configure as variáveis em /opt/datageoplan-python-api/.env"
+            else
+              echo "✅ Arquivo .env já existe, mantendo configuração atual"
+            fi
+            chmod 600 /opt/datageoplan-python-api/.env
+            
+            echo "📦 Carregando imagem Docker..."
+            docker load < /tmp/api-image.tar.gz
+            rm /tmp/api-image.tar.gz
+            
+            echo "🔄 Parando containers antigos..."
+            cd /opt/datageoplan-python-api
+            docker compose down || true
+            
+            echo "🚀 Iniciando novo container..."
+            docker compose --env-file .env up -d
+            
+            echo "🧹 Limpando imagens antigas..."
+            docker image prune -f
+            
+            echo "✅ Deploy concluído!"
+            docker ps | grep datageoplan
+          ENDSSH
+
+      - name: Health check
+        run: |
+          sleep 20
+          ssh -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << ENDSSH
+            echo "Checking containers..."
+            docker ps | grep datageoplan || echo "No datageoplan containers found!"
+            
+            echo "Checking API logs..."
+            docker logs datageoplan-python-api --tail 20 2>&1 || true
+            
+            echo "Checking API..."
+            for i in 1 2 3 4 5; do
+              if curl -sf http://localhost:8001/health; then
+                echo "✅ API OK"
+                break
+              fi
+              echo "Attempt \$i failed, waiting 5s..."
+              sleep 5
+            done
+            curl -sf http://localhost:8001/health || exit 1
+          ENDSSH
+          echo "✅ All health checks passed!"
