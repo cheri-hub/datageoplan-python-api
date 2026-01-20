@@ -73,74 +73,47 @@ def create_app() -> FastAPI:
     settings = get_settings()
     
     app = FastAPI(
-        title="Gov.br Auth API",
+        title="DataGeoPlan Python API",
         description="""
-# API para Autenticação Gov.br e Integração SIGEF
+# API Multi-Plataforma para Dados Geoespaciais
 
-API para autenticação no Gov.br via certificado digital A1/A3
-e integração com SIGEF INCRA para download de dados de parcelas.
+API minimalista para integração com SIGEF, SICAR e outras plataformas de dados geoespaciais.
 
 ## 🔐 Autenticação
 
-A API utiliza autenticação via Bearer Token (API Key):
-
+Bearer Token (API Key):
 ```
-Authorization: Bearer sua-api-key-aqui
+Authorization: Bearer sua-api-key
 ```
 
-## 📋 Funcionalidades
+## 📋 Endpoints
 
-### Autenticação
-- **Login Gov.br**: Autenticação via certificado digital (browser remoto)
-- **Status**: Verificação de sessão ativa
-- **Logout**: Encerramento de sessão
+### Autenticação (`/v1/auth`)
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| GET | `/status` | Verifica sessão ativa |
+| POST | `/browser-login` | Inicia login Gov.br |
+| POST | `/browser-callback` | Callback após login |
+| POST | `/logout` | Encerra sessão |
 
-### Integração SIGEF
-- **Consulta**: Busca de parcelas por código
-- **Detalhes**: Informações completas da parcela
-- **Download**: CSV de parcela, vértices e limites
+### SIGEF (`/v1/sigef`)
+| Método | Endpoint | Descrição |
+|--------|----------|-----------|
+| GET | `/arquivo/csv/{codigo}/{tipo}` | Download CSV (parcela/vertices/limites) |
+| GET | `/arquivo/todos/{codigo}` | Download ZIP completo |
 
-### Download Direto (para C#/.NET)
-Os endpoints `/sigef/arquivo/*` retornam arquivos diretamente como bytes,
-facilitando integração com aplicações externas.
+## 🚀 Exemplo
 
-## 🚀 Início Rápido
-
-### 1. Autenticar
 ```bash
+# 1. Login
 curl -X POST http://localhost:8000/api/v1/auth/browser-login
-# Retorna URL para login no navegador
-```
 
-### 2. Download de CSV
-```bash
+# 2. Download CSV
 curl -o parcela.csv http://localhost:8000/api/v1/sigef/arquivo/csv/{codigo}/parcela
 ```
 
-### 3. Download Completo (ZIP)
-```bash
-curl -o completo.zip http://localhost:8000/api/v1/sigef/arquivo/todos/{codigo}
-```
-
-## 📦 Integração C#
-
-```csharp
-var client = new HttpClient();
-client.DefaultRequestHeaders.Authorization = 
-    new AuthenticationHeaderValue("Bearer", "sua-api-key");
-
-// Download CSV
-var response = await client.GetAsync(
-    "http://localhost:8000/api/v1/sigef/arquivo/csv/{codigo}/parcela"
-);
-var bytes = await response.Content.ReadAsByteArrayAsync();
-File.WriteAllBytes("parcela.csv", bytes);
-```
-
-## 📚 Documentação Completa
-
-- [Integração C#](https://github.com/seu-repo/gov-auth/blob/main/INTEGRACAO_CSHARP.md)
-- [Docker Deploy](https://github.com/seu-repo/gov-auth/blob/main/DOCKER_DEPLOY.md)
+## 🔮 Futuras Plataformas
+- **SICAR** - Cadastro Ambiental Rural (planejado)
         """,
         version="1.0.0",
         docs_url=None,  # Configuraremos manualmente
@@ -158,19 +131,11 @@ File.WriteAllBytes("parcela.csv", bytes);
         openapi_tags=[
             {
                 "name": "Autenticação",
-                "description": "Endpoints para login/logout Gov.br e gerenciamento de sessão",
+                "description": "Login/logout Gov.br e gerenciamento de sessão",
             },
             {
                 "name": "SIGEF",
-                "description": "Consulta e download de dados de parcelas do SIGEF INCRA",
-            },
-            {
-                "name": "Download Direto",
-                "description": "Endpoints para download direto de arquivos (ideal para C#/.NET)",
-            },
-            {
-                "name": "Consulta WFS",
-                "description": "Consulta geoespacial de imóveis rurais via WFS",
+                "description": "Download de arquivos CSV do SIGEF INCRA",
             },
             {
                 "name": "Health",
