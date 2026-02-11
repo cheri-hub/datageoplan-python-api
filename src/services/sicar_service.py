@@ -225,6 +225,87 @@ class SicarService:
         
         raise Exception(f"Download CAR falhou após {max_retries} tentativas: {last_error}")
 
+    def download_and_process_state(
+        self,
+        state: str,
+        polygon: str,
+        include_sld: bool = True
+    ) -> Tuple[bytes, str, dict]:
+        """
+        Baixa e processa shapefile de um estado, retornando dados organizados.
+        
+        Args:
+            state: Sigla do estado (ex: "SP")
+            polygon: Tipo de polígono (ex: "AREA_PROPERTY")
+            include_sld: Se deve incluir arquivos SLD
+            
+        Returns:
+            Tuple com (bytes do ZIP processado, nome do arquivo, resultado)
+            
+        Raises:
+            Exception: Se o download ou processamento falhar
+        """
+        from src.services.car_processor import CarProcessor
+        
+        logger.info(f"Iniciando download + processamento: {state} - {polygon}")
+        
+        # 1. Baixar do SICAR
+        zip_bytes, _ = self.download_polygon_as_bytes(state, polygon)
+        
+        # 2. Processar
+        processor = CarProcessor()
+        processed_bytes, filename, resultado = processor.processar_zip_bytes(
+            zip_bytes,
+            include_sld=include_sld
+        )
+        
+        logger.info(f"Processamento concluído: {resultado['temas_processados']} temas")
+        
+        return processed_bytes, filename, resultado
+
+    def download_and_process_car(
+        self,
+        car_number: str,
+        include_sld: bool = True
+    ) -> Tuple[bytes, str, dict]:
+        """
+        Baixa e processa shapefile de CAR, retornando dados organizados.
+        
+        Args:
+            car_number: Número do CAR
+            include_sld: Se deve incluir arquivos SLD
+            
+        Returns:
+            Tuple com (bytes do ZIP processado, nome do arquivo, resultado)
+            
+        Raises:
+            Exception: Se o download ou processamento falhar
+        """
+        from src.services.car_processor import CarProcessor
+        
+        logger.info(f"Iniciando download + processamento CAR: {car_number}")
+        
+        # 1. Baixar do SICAR
+        zip_bytes, _ = self.download_car_as_bytes(car_number)
+        
+        # 2. Processar
+        processor = CarProcessor()
+        processed_bytes, filename, resultado = processor.processar_zip_bytes(
+            zip_bytes,
+            include_sld=include_sld
+        )
+        
+        # Usar o recibo do CAR no nome do arquivo
+        if resultado.get("recibo"):
+            filename = f"{resultado['recibo']}_processado.zip"
+        else:
+            safe_car = car_number.replace("-", "_").replace("/", "_")
+            filename = f"{safe_car}_processado.zip"
+        
+        logger.info(f"Processamento CAR concluído: {resultado['temas_processados']} temas, {resultado['feicoes_total']} feições")
+        
+        return processed_bytes, filename, resultado
+
 
 # Polígonos disponíveis para documentação
 AVAILABLE_POLYGONS = [
