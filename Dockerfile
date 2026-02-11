@@ -42,6 +42,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # Para SICAR (OCR captcha)
     tesseract-ocr \
     tesseract-ocr-por \
+    # Para GIS/GeoPandas (GDAL)
+    libgdal-dev \
+    gdal-bin \
+    python3-gdal \
+    libgeos-dev \
+    libproj-dev \
     # Utilitários
     curl \
     && rm -rf /var/lib/apt/lists/*

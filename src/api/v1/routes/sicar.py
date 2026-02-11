@@ -5,15 +5,32 @@ Endpoints para download direto de arquivos do SICAR.
 """
 
 from enum import Enum
-from typing import Annotated
+from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from src.api.v1.dependencies import RequireAPIKey
+from src.api.v1.schemas import (
+    TemaCAR,
+    GrupoCAR,
+    GrupoTemasCAR,
+    ResultadoProcessamentoCAR,
+    ProcessedStateRequest,
+    ProcessedCARRequest,
+    PaletaCoresResponse,
+)
 from src.core.logging import get_logger
 from src.services.sicar_service import SicarService, AVAILABLE_POLYGONS, AVAILABLE_STATES
+from src.infrastructure.sicar_package.car_reference import (
+    MODELO_CAR,
+    buscar_tema,
+    listar_grupos,
+    listar_temas_por_grupo,
+    obter_paleta_cores,
+)
+from src.infrastructure.sicar_package.sld_generator import gerar_sld_por_nome
 
 logger = get_logger(__name__)
 
@@ -234,8 +251,267 @@ async def sicar_info(_api_key: RequireAPIKey):
                 "method": "POST",
                 "description": "Download de shapefile por número CAR",
                 "timeout_recommended": "2 minutos"
+            },
+            "stream/state/processed": {
+                "method": "POST",
+                "description": "Download de shapefile processado por estado com SLD",
+                "timeout_recommended": "5 minutos"
+            },
+            "stream/car/processed": {
+                "method": "POST",
+                "description": "Download de shapefile de CAR processado com SLD",
+                "timeout_recommended": "5 minutos"
+            },
+            "temas": {
+                "method": "GET",
+                "description": "Lista todos os grupos de temas CAR"
+            },
+            "sld/{tema}": {
+                "method": "GET",
+                "description": "Gera arquivo SLD para um tema específico"
+            },
+            "cores": {
+                "method": "GET",
+                "description": "Retorna paleta de cores de todos os temas"
             }
         },
         "available_polygons": AVAILABLE_POLYGONS,
         "available_states": AVAILABLE_STATES,
+    }
+
+
+# ===== Endpoints de Download Processado =====
+
+@router.post(
+    "/stream/state/processed",
+    summary="Download shapefile processado por estado",
+    response_description="Arquivo ZIP contendo shapefiles organizados com SLD",
+)
+async def stream_download_state_processed(
+    body: ProcessedStateRequest,
+    _api_key: RequireAPIKey,
+):
+    """
+    Baixa um shapefile de polígono de um estado, processa e retorna organizado.
+    
+    ## ⚠️ Tempo de Resposta
+    Este endpoint pode demorar **2-5 minutos** devido ao download + processamento.
+    Configure timeout adequado no cliente (recomendado: 10 minutos).
+    
+    ## Processamento Inclui:
+    - Download do SICAR
+    - Organização por grupos temáticos
+    - Geração de arquivos SLD (estilos)
+    - Padronização de nomes e estrutura
+    
+    ## Exemplo cURL
+    ```bash
+    curl -X POST "http://localhost:8000/api/v1/sicar/stream/state/processed" \\
+      -H "Authorization: Bearer sua-api-key" \\
+      -H "Content-Type: application/json" \\
+      -d '{"state": "SP", "polygon": "AREA_PROPERTY", "include_sld": true}' \\
+      --output SP_processado.zip
+    ```
+    """
+    try:
+        service = SicarService()
+        
+        file_bytes, filename, resultado = service.download_and_process_state(
+            state=body.state,
+            polygon=body.polygon,
+            include_sld=body.include_sld
+        )
+        
+        return StreamingResponse(
+            iter([file_bytes]),
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}",
+                "Content-Length": str(len(file_bytes)),
+                "X-CAR-Temas-Processados": str(resultado.get("temas_processados", 0)),
+                "X-CAR-Feicoes-Total": str(resultado.get("feicoes_total", 0)),
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Erro no download processado SICAR por estado: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao processar arquivo: {str(e)}"
+        )
+
+
+@router.post(
+    "/stream/car/processed",
+    summary="Download shapefile de CAR processado",
+    response_description="Arquivo ZIP contendo shapefiles organizados com SLD",
+)
+async def stream_download_car_processed(
+    body: ProcessedCARRequest,
+    _api_key: RequireAPIKey,
+):
+    """
+    Baixa shapefile de uma propriedade específica, processa e retorna organizado.
+    
+    ## ⚠️ Tempo de Resposta
+    Este endpoint pode demorar **2-5 minutos** devido ao download + processamento.
+    Configure timeout adequado no cliente (recomendado: 10 minutos).
+    
+    ## Processamento Inclui:
+    - Busca e download da propriedade no SICAR
+    - Organização por grupos temáticos
+    - Geração de arquivos SLD (estilos)
+    - Padronização de nomes e estrutura
+    
+    ## Exemplo cURL
+    ```bash
+    curl -X POST "http://localhost:8000/api/v1/sicar/stream/car/processed" \\
+      -H "Authorization: Bearer sua-api-key" \\
+      -H "Content-Type: application/json" \\
+      -d '{"car_number": "SP-3538709-XXX", "include_sld": true}' \\
+      --output car_processado.zip
+    ```
+    """
+    try:
+        service = SicarService()
+        
+        file_bytes, filename, resultado = service.download_and_process_car(
+            car_number=body.car_number,
+            include_sld=body.include_sld
+        )
+        
+        return StreamingResponse(
+            iter([file_bytes]),
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}",
+                "Content-Length": str(len(file_bytes)),
+                "X-CAR-Recibo": resultado.get("recibo", ""),
+                "X-CAR-Temas-Processados": str(resultado.get("temas_processados", 0)),
+                "X-CAR-Feicoes-Total": str(resultado.get("feicoes_total", 0)),
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Erro no download processado SICAR por CAR: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao processar arquivo: {str(e)}"
+        )
+
+
+# ===== Endpoints de Temas CAR =====
+
+@router.get(
+    "/temas",
+    summary="Lista grupos de temas CAR",
+    response_model=list[GrupoCAR],
+)
+async def listar_grupos_temas(_api_key: RequireAPIKey):
+    """
+    Lista todos os grupos de temas CAR disponíveis.
+    
+    Os grupos organizam os temas por categoria:
+    - Áreas Totais
+    - Área do Imóvel
+    - Área de Uso Restrito
+    - Servidão Administrativa
+    - Cobertura do Solo
+    - Área de Preservação Permanente
+    - Reserva Legal
+    """
+    grupos = listar_grupos()
+    return [GrupoCAR(**grupo) for grupo in grupos]
+
+
+@router.get(
+    "/temas/{grupo}",
+    summary="Lista temas de um grupo específico",
+    response_model=GrupoTemasCAR,
+)
+async def listar_temas_grupo(
+    grupo: str,
+    _api_key: RequireAPIKey,
+):
+    """
+    Lista todos os temas de um grupo CAR específico.
+    
+    ## Grupos disponíveis:
+    - `_Totalizadores`
+    - `Area_do_Imovel`
+    - `Area_de_Uso_Restrito`
+    - `Servidao_Administrativa`
+    - `Cobertura_do_Solo`
+    - `Area_de_Preservacao_Permanente`
+    - `Reserva_Legal`
+    """
+    if grupo not in MODELO_CAR:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Grupo '{grupo}' não encontrado. Grupos disponíveis: {list(MODELO_CAR.keys())}"
+        )
+    
+    classe_dados = MODELO_CAR[grupo]
+    temas = [TemaCAR(**tema) for tema in classe_dados["temas_possiveis"]]
+    
+    return GrupoTemasCAR(
+        classe=grupo,
+        nome_grupo=classe_dados["nome_grupo"],
+        ordem=classe_dados["ordem"],
+        temas=temas
+    )
+
+
+@router.get(
+    "/sld/{tema}",
+    summary="Gera SLD para um tema",
+    response_class=Response,
+)
+async def gerar_sld_tema(
+    tema: str,
+    _api_key: RequireAPIKey,
+):
+    """
+    Gera arquivo SLD (Styled Layer Descriptor) para um tema CAR.
+    
+    Use o nome do `arquivo_modelo` retornado pelos endpoints de temas.
+    
+    ## Exemplo
+    - `/sld/Area_do_Imovel`
+    - `/sld/Reserva_Legal_Proposta`
+    - `/sld/APP_Rios_ate_10_metros`
+    """
+    sld_content = gerar_sld_por_nome(tema)
+    
+    if sld_content is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Tema '{tema}' não encontrado"
+        )
+    
+    return Response(
+        content=sld_content,
+        media_type="application/xml",
+        headers={
+            "Content-Disposition": f"attachment; filename={tema}.sld"
+        }
+    )
+
+
+@router.get(
+    "/cores",
+    summary="Paleta de cores dos temas CAR",
+    response_model=dict[str, PaletaCoresResponse],
+)
+async def obter_paleta(_api_key: RequireAPIKey):
+    """
+    Retorna a paleta de cores de todos os temas CAR.
+    
+    Útil para criar visualizações customizadas ou integrar
+    com outros sistemas GIS.
+    """
+    paleta = obter_paleta_cores()
+    return {
+        nome: PaletaCoresResponse(**dados)
+        for nome, dados in paleta.items()
     }
