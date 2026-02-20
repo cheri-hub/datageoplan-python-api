@@ -20,6 +20,7 @@ from src.api.v1.schemas import (
     ProcessedStateRequest,
     ProcessedCARRequest,
     PaletaCoresResponse,
+    DemonstrativoCAR,
 )
 from src.core.logging import get_logger
 from src.services.sicar_service import SicarService, AVAILABLE_POLYGONS, AVAILABLE_STATES
@@ -31,6 +32,7 @@ from src.infrastructure.sicar_package.car_reference import (
     obter_paleta_cores,
 )
 from src.infrastructure.sicar_package.sld_generator import gerar_sld_por_nome
+from src.services.car_consulta_service import CarConsultaService, CarConsultaError
 
 logger = get_logger(__name__)
 
@@ -515,3 +517,166 @@ async def obter_paleta(_api_key: RequireAPIKey):
         nome: PaletaCoresResponse(**dados)
         for nome, dados in paleta.items()
     }
+
+
+# ===== Endpoints de Consulta CAR (Demonstrativo) =====
+
+@router.get(
+    "/consulta/{car_code}",
+    summary="Consulta dados do registro CAR",
+    response_model=DemonstrativoCAR,
+    responses={
+        200: {"description": "Dados do demonstrativo CAR"},
+        400: {"description": "Código CAR inválido"},
+        404: {"description": "Registro CAR não encontrado"},
+        502: {"description": "Erro ao comunicar com car.gov.br"},
+    },
+)
+async def consultar_car(
+    car_code: str,
+    _api_key: RequireAPIKey,
+):
+    """
+    Retorna JSON com todas as informações do registro CAR informado.
+    
+    Os dados são obtidos diretamente do sistema oficial car.gov.br e incluem:
+    
+    - **Situação do Cadastro** — status, condição de análise
+    - **Dados do Imóvel** — área, módulos fiscais, município, coordenadas, datas
+    - **Cobertura do Solo** — vegetação nativa, área consolidada, servidão
+    - **Reserva Legal** — situação, áreas propostas/averbadas
+    - **APP** — áreas de preservação permanente
+    - **Uso Restrito** — áreas de uso restrito
+    - **Regularidade Ambiental** — passivo/excedente, áreas a recompor
+    
+    ## Formato do Código CAR
+    `UF-CODIGO_MUNICIPIO-HASH`  
+    Exemplo: `SP-3522307-B4A8A1B13D664F0981FB59901F2871CD`
+    
+    ## Exemplo cURL
+    ```bash
+    curl -X GET "http://localhost:8000/api/v1/sicar/consulta/SP-3522307-B4A8A1B13D664F0981FB59901F2871CD" \\
+      -H "X-API-Key: sua-api-key"
+    ```
+    """
+    car_code = car_code.strip()
+    if len(car_code) < 10 or car_code.count("-") < 2:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Código CAR inválido. Formato esperado: UF-CODIGOMUNICIPIO-HASH",
+        )
+
+    try:
+        service = CarConsultaService()
+        dados = service.consultar_demonstrativo(car_code)
+        
+        # Remover dados brutos da resposta tipada
+        dados_sem_brutos = {k: v for k, v in dados.items() if k != "_dados_brutos"}
+        return DemonstrativoCAR(**dados_sem_brutos)
+        
+    except CarConsultaError as e:
+        logger.error(f"Erro ao consultar CAR {car_code}: {e}")
+        
+        msg = str(e)
+        if "404" in msg or "não encontrado" in msg.lower():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Registro CAR não encontrado: {car_code}",
+            )
+        
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Erro ao consultar car.gov.br: {msg}",
+        )
+    except Exception as e:
+        logger.error(f"Erro inesperado ao consultar CAR {car_code}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro interno: {str(e)}",
+        )
+
+
+@router.get(
+    "/consulta/{car_code}/pdf",
+    summary="PDF do demonstrativo CAR",
+    response_class=StreamingResponse,
+    responses={
+        200: {
+            "description": "PDF do demonstrativo",
+            "content": {"application/pdf": {}},
+        },
+        400: {"description": "Código CAR inválido"},
+        404: {"description": "Registro CAR não encontrado"},
+        502: {"description": "Erro ao comunicar com car.gov.br"},
+    },
+)
+async def consultar_car_pdf(
+    car_code: str,
+    _api_key: RequireAPIKey,
+):
+    """
+    Retorna PDF do demonstrativo do registro CAR, no formato similar ao oficial.
+    
+    O PDF contém todas as seções do demonstrativo:
+    - Situação do Cadastro
+    - Dados do Imóvel Rural
+    - Cobertura do Solo
+    - Reserva Legal
+    - Áreas de Preservação Permanente (APP)
+    - Uso Restrito
+    - Regularidade Ambiental
+    - Informações Gerais
+    
+    ## Formato do Código CAR
+    `UF-CODIGO_MUNICIPIO-HASH`
+    
+    ## Exemplo cURL
+    ```bash
+    curl -X GET "http://localhost:8000/api/v1/sicar/consulta/SP-3522307-B4A8A1B13D664F0981FB59901F2871CD/pdf" \\
+      -H "X-API-Key: sua-api-key" \\
+      --output demonstrativo.pdf
+    ```
+    """
+    car_code = car_code.strip()
+    if len(car_code) < 10 or car_code.count("-") < 2:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Código CAR inválido. Formato esperado: UF-CODIGOMUNICIPIO-HASH",
+        )
+
+    try:
+        service = CarConsultaService()
+        pdf_bytes = service.gerar_pdf_demonstrativo(car_code)
+        
+        safe_name = car_code.replace("/", "_")
+        filename = f"Demonstrativo_{safe_name}.pdf"
+        
+        return StreamingResponse(
+            iter([pdf_bytes]),
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "Content-Length": str(len(pdf_bytes)),
+            },
+        )
+        
+    except CarConsultaError as e:
+        logger.error(f"Erro ao gerar PDF CAR {car_code}: {e}")
+        
+        msg = str(e)
+        if "404" in msg or "não encontrado" in msg.lower():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Registro CAR não encontrado: {car_code}",
+            )
+        
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Erro ao consultar car.gov.br: {msg}",
+        )
+    except Exception as e:
+        logger.error(f"Erro inesperado ao gerar PDF CAR {car_code}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro interno: {str(e)}",
+        )
