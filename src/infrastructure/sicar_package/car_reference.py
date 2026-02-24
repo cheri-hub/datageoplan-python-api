@@ -22,44 +22,6 @@ from typing import Optional, Dict, List, Tuple, Any
 
 MODELO_CAR: Dict[str, Any] = {
     # ================================================================
-    # GRUPO 7: RESUMO (aparece no final)
-    # ================================================================
-    "_Totalizadores": {
-        "nome_grupo": "Resumo",
-        "ordem": 7,
-        "temas_possiveis": [
-            {
-                "tema_car": "APP Total",
-                "arquivo_modelo": "APP_Total",
-                "cor_preenchimento": "#fffb00",
-                "cor_contorno": "#fffb00",
-                "tipo": "Polygon"
-            },
-            {
-                "tema_car": "Área de Reserva Legal Total",
-                "arquivo_modelo": "Area_de_Reserva_Legal_Total",
-                "cor_preenchimento": "#228b22",
-                "cor_contorno": "#1a6b1a",
-                "tipo": "Polygon"
-            },
-            {
-                "tema_car": "Área de Servidão Administrativa Total",
-                "arquivo_modelo": "Area_de_Servidao_Administrativa_Total",
-                "cor_preenchimento": "#8e4d7d",
-                "cor_contorno": "#8e4d7d",
-                "tipo": "Polygon"
-            },
-            {
-                "tema_car": "Uso Restrito total",
-                "arquivo_modelo": "Uso_Restrito_Total",
-                "cor_preenchimento": "#ff8390",
-                "cor_contorno": "#ff8390",
-                "tipo": "Polygon"
-            }
-        ]
-    },
-    
-    # ================================================================
     # GRUPO 1: ÁREA DO IMÓVEL
     # ================================================================
     "Area_do_Imovel": {
@@ -85,30 +47,6 @@ MODELO_CAR: Dict[str, Any] = {
                 "arquivo_modelo": "Area_Liquida_do_Imovel",
                 "cor_preenchimento": "#868585",
                 "cor_contorno": "#e1b816",
-                "tipo": "Polygon"
-            }
-        ]
-    },
-    
-    # ================================================================
-    # GRUPO 6: ÁREA DE USO RESTRITO
-    # ================================================================
-    "Area_de_Uso_Restrito": {
-        "nome_grupo": "Área de Uso Restrito",
-        "ordem": 6,
-        "temas_possiveis": [
-            {
-                "tema_car": "Área de Uso Restrito para declividade de 25 a 45 graus",
-                "arquivo_modelo": "Area_de_Uso_Restrito_Declividade_25_a_45_graus",
-                "cor_preenchimento": "#ffaab1",
-                "cor_contorno": "#ffaab1",
-                "tipo": "Polygon"
-            },
-            {
-                "tema_car": "Área de Uso Restrito para regiões pantaneras",
-                "arquivo_modelo": "Area_de_Uso_Restrito_Regioes_Pantaneras",
-                "cor_preenchimento": "#ff606e",
-                "cor_contorno": "#ff606e",
                 "tipo": "Polygon"
             }
         ]
@@ -534,6 +472,68 @@ MODELO_CAR: Dict[str, Any] = {
                 "arquivo_modelo": "Reserva_Legal_Vinculada_Compensacao",
                 "cor_preenchimento": "#9ef1b1",
                 "cor_contorno": "#e3add6",
+                "tipo": "Polygon"
+            }
+        ]
+    },
+    
+    # ================================================================
+    # GRUPO 6: ÁREA DE USO RESTRITO
+    # ================================================================
+    "Area_de_Uso_Restrito": {
+        "nome_grupo": "Área de Uso Restrito",
+        "ordem": 6,
+        "temas_possiveis": [
+            {
+                "tema_car": "Área de Uso Restrito para declividade de 25 a 45 graus",
+                "arquivo_modelo": "Area_de_Uso_Restrito_Declividade_25_a_45_graus",
+                "cor_preenchimento": "#ffaab1",
+                "cor_contorno": "#ffaab1",
+                "tipo": "Polygon"
+            },
+            {
+                "tema_car": "Área de Uso Restrito para regiões pantaneras",
+                "arquivo_modelo": "Area_de_Uso_Restrito_Regioes_Pantaneras",
+                "cor_preenchimento": "#ff606e",
+                "cor_contorno": "#ff606e",
+                "tipo": "Polygon"
+            }
+        ]
+    },
+    
+    # ================================================================
+    # GRUPO 7: RESUMO (aparece no final)
+    # ================================================================
+    "_Totalizadores": {
+        "nome_grupo": "Resumo",
+        "ordem": 7,
+        "temas_possiveis": [
+            {
+                "tema_car": "APP Total",
+                "arquivo_modelo": "APP_Total",
+                "cor_preenchimento": "#fffb00",
+                "cor_contorno": "#fffb00",
+                "tipo": "Polygon"
+            },
+            {
+                "tema_car": "Área de Reserva Legal Total",
+                "arquivo_modelo": "Area_de_Reserva_Legal_Total",
+                "cor_preenchimento": "#228b22",
+                "cor_contorno": "#1a6b1a",
+                "tipo": "Polygon"
+            },
+            {
+                "tema_car": "Área de Servidão Administrativa Total",
+                "arquivo_modelo": "Area_de_Servidao_Administrativa_Total",
+                "cor_preenchimento": "#8e4d7d",
+                "cor_contorno": "#8e4d7d",
+                "tipo": "Polygon"
+            },
+            {
+                "tema_car": "Uso Restrito total",
+                "arquivo_modelo": "Uso_Restrito_Total",
+                "cor_preenchimento": "#ff8390",
+                "cor_contorno": "#ff8390",
                 "tipo": "Polygon"
             }
         ]

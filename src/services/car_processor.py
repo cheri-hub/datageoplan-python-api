@@ -559,7 +559,13 @@ class CarProcessor:
             classe = info['classe']
             temas_por_classe[classe].append((tema_original, dados))
         
-        for classe in temas_por_classe.keys():
+        # Ordenar classes pela ordem definida no MODELO_CAR
+        classes_ordenadas = sorted(
+            temas_por_classe.keys(),
+            key=lambda c: MODELO_CAR.get(c, {}).get("ordem", 999)
+        )
+        
+        for classe in classes_ordenadas:
             dir_classe = os.path.join(diretorio_saida, classe)
             if not os.path.exists(dir_classe):
                 os.makedirs(dir_classe)
@@ -567,7 +573,8 @@ class CarProcessor:
         # 6. Processar e salvar shapefiles
         logger.info("Criando shapefiles...")
         
-        for classe, temas_lista in temas_por_classe.items():
+        for classe in classes_ordenadas:
+            temas_lista = temas_por_classe[classe]
             dir_classe = os.path.join(diretorio_saida, classe)
             
             for tema_original, dados in temas_lista:
