@@ -565,8 +565,18 @@ class CarProcessor:
             key=lambda c: MODELO_CAR.get(c, {}).get("ordem", 999)
         )
         
+        # Mapear chave da classe para nome de pasta amigável (ex: "1-Area_do_Imovel")
+        classe_para_pasta = {}
         for classe in classes_ordenadas:
-            dir_classe = os.path.join(diretorio_saida, classe)
+            dados_classe = MODELO_CAR.get(classe, {})
+            ordem = dados_classe.get("ordem", 99)
+            nome_grupo = dados_classe.get("nome_grupo", classe)
+            # Substituir espaços por underscores e remover acentos problemáticos para filesystem
+            nome_pasta = nome_grupo.replace(" ", "_")
+            classe_para_pasta[classe] = f"{ordem}-{nome_pasta}"
+        
+        for classe in classes_ordenadas:
+            dir_classe = os.path.join(diretorio_saida, classe_para_pasta[classe])
             if not os.path.exists(dir_classe):
                 os.makedirs(dir_classe)
         
@@ -575,7 +585,7 @@ class CarProcessor:
         
         for classe in classes_ordenadas:
             temas_lista = temas_por_classe[classe]
-            dir_classe = os.path.join(diretorio_saida, classe)
+            dir_classe = os.path.join(diretorio_saida, classe_para_pasta[classe])
             
             for tema_original, dados in temas_lista:
                 caminho_shp, num_feicoes, sucesso = self.processar_e_salvar_shapefile(
