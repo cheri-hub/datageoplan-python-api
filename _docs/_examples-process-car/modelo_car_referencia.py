@@ -20,11 +20,11 @@ Uso:
 
 MODELO_CAR = {
     # ================================================================
-    # GRUPO 0: ÁREAS TOTAIS (aparece no topo)
+    # GRUPO 7: RESUMO (aparece no final)
     # ================================================================
     "_Totalizadores": {
-        "nome_grupo": "Áreas Totais",
-        "ordem": 0,
+        "nome_grupo": "Resumo",
+        "ordem": 7,
         "temas_possiveis": [
             {
                 "tema_car": "APP Total",
@@ -89,11 +89,11 @@ MODELO_CAR = {
     },
     
     # ================================================================
-    # GRUPO 2: ÁREA DE USO RESTRITO
+    # GRUPO 6: ÁREA DE USO RESTRITO
     # ================================================================
     "Area_de_Uso_Restrito": {
         "nome_grupo": "Área de Uso Restrito",
-        "ordem": 2,
+        "ordem": 6,
         "temas_possiveis": [
             {
                 "tema_car": "Área de Uso Restrito para declividade de 25 a 45 graus",
@@ -113,11 +113,11 @@ MODELO_CAR = {
     },
     
     # ================================================================
-    # GRUPO 3: SERVIDÃO ADMINISTRATIVA
+    # GRUPO 2: SERVIDÃO ADMINISTRATIVA
     # ================================================================
     "Servidao_Administrativa": {
         "nome_grupo": "Servidão Administrativa",
-        "ordem": 3,
+        "ordem": 2,
         "temas_possiveis": [
             {
                 "tema_car": "Infraestrutura Pública",
@@ -151,11 +151,11 @@ MODELO_CAR = {
     },
     
     # ================================================================
-    # GRUPO 4: COBERTURA DO SOLO
+    # GRUPO 3: COBERTURA DO SOLO
     # ================================================================
     "Cobertura_do_Solo": {
         "nome_grupo": "Cobertura do Solo",
-        "ordem": 4,
+        "ordem": 3,
         "temas_possiveis": [
             {
                 "tema_car": "Área Consolidada",
@@ -189,11 +189,11 @@ MODELO_CAR = {
     },
     
     # ================================================================
-    # GRUPO 5: ÁREA DE PRESERVAÇÃO PERMANENTE
+    # GRUPO 4: ÁREA DE PRESERVAÇÃO PERMANENTE
     # ================================================================
     "Area_de_Preservacao_Permanente": {
         "nome_grupo": "Área de Preservação Permanente",
-        "ordem": 5,
+        "ordem": 4,
         "temas_possiveis": [
             # GEOMETRIAS BASE (polígonos de referência)
             {
@@ -500,11 +500,11 @@ MODELO_CAR = {
     },
     
     # ================================================================
-    # GRUPO 6: RESERVA LEGAL
+    # GRUPO 5: RESERVA LEGAL
     # ================================================================
     "Reserva_Legal": {
         "nome_grupo": "Reserva Legal",
-        "ordem": 6,
+        "ordem": 5,
         "temas_possiveis": [
             {
                 "tema_car": "Reserva Legal Proposta",

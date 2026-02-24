@@ -414,13 +414,13 @@ async def listar_grupos_temas(_api_key: RequireAPIKey):
     Lista todos os grupos de temas CAR disponíveis.
     
     Os grupos organizam os temas por categoria:
-    - Áreas Totais
     - Área do Imóvel
-    - Área de Uso Restrito
     - Servidão Administrativa
     - Cobertura do Solo
     - Área de Preservação Permanente
     - Reserva Legal
+    - Área de Uso Restrito
+    - Resumo
     """
     grupos = listar_grupos()
     return [GrupoCAR(**grupo) for grupo in grupos]
