@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from src.api.v1.routes.auth import router as auth_router
 from src.api.v1.routes.sigef import router as sigef_router
 from src.api.v1.routes.sicar import router as sicar_router
+from src.api.v1.routes.car_bbox import router as car_bbox_router
 
 router = APIRouter()
 
@@ -14,6 +15,7 @@ router = APIRouter()
 router.include_router(auth_router)
 router.include_router(sigef_router)
 router.include_router(sicar_router)
+router.include_router(car_bbox_router)
 
 
 @router.get("/", tags=["Info"])

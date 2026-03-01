@@ -11,6 +11,13 @@ from src.domain.entities.parcela import (
     Vertice,
 )
 from src.domain.entities.session import Cookie, JWTPayload, Session
+from src.domain.entities.car_bbox import (
+    StatusImovelSicar,
+    TipoImovelSicar,
+    UfSicar,
+    UF_BBOXES,
+    detectar_ufs_por_bbox,
+)
 
 __all__ = [
     # Session
@@ -24,4 +31,10 @@ __all__ = [
     "Vertice",
     "Limite",
     "Coordenada",
+    # CAR BBox
+    "UfSicar",
+    "StatusImovelSicar",
+    "TipoImovelSicar",
+    "UF_BBOXES",
+    "detectar_ufs_por_bbox",
 ]

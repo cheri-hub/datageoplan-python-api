@@ -54,6 +54,41 @@ Todas em `src/domain/entities/`, implementadas como **dataclasses** (não Pydant
 | `ParcelaSituacao` | Enum: `CERTIFICADA`, `PENDENTE`, `CANCELADA`, `EM_ANALISE` |
 | `TipoExportacao` | Enum: `PARCELA`, `VERTICE`, `LIMITE` |
 
+## Princípio de Impacto Mínimo (CRÍTICO)
+
+Ao implementar novas features ou correções, **minimizar ao máximo alterações em código existente que já funciona**.
+O objetivo é **adicionar** código novo, não **reescrever** o que já está estável.
+
+### Regras Obrigatórias
+
+1. **Nunca refatorar código existente funcional** como parte de uma feature nova — a menos que seja explicitamente solicitado ou muito necessário para a implementação. Refatoração é uma tarefa separada.
+2. **Nunca alterar assinaturas de funções/métodos existentes** (parâmetros, tipos de retorno) — se precisar de novos parâmetros, usar valores default ou criar nova função
+3. **Nunca renomear** arquivos, classes, funções ou variáveis existentes sem pedido explícito — isso quebra imports e referências em cascata
+4. **Nunca mover código entre arquivos/módulos** sem pedido explícito — reorganização é uma tarefa separada
+5. **Nunca alterar `__init__.py` existentes** além de adicionar novos exports ao `__all__` — não remover nem reordenar exports
+6. **Nunca modificar middlewares, exception handlers ou configuração global** ao implementar um endpoint novo — criar handlers específicos se necessário
+7. **Nunca alterar schemas Pydantic ou dataclasses existentes** que já são usados por outros endpoints — criar novos schemas se a feature exigir campos diferentes
+8. **Nunca atualizar dependências** (`requirements.txt`, `pyproject.toml`) a menos que a feature nova exija uma lib que ainda não está instalada
+
+### Estratégias Preferidas
+
+- **Extensão sobre modificação**: Criar novas funções/classes/módulos em vez de alterar os existentes
+- **Composição sobre herança**: Compor comportamento novo usando serviços existentes sem modificá-los
+- **Novos arquivos sobre edição**: Preferir criar um arquivo novo (ex: `car_bbox_service.py`) a editar um existente (ex: `sicar_service.py`)
+- **Parâmetros opcionais**: Se precisar estender uma função existente, adicionar parâmetro com valor default (`novo_param: str | None = None`)
+- **Wrappers**: Se o comportamento de uma função existente precisa mudar para a feature nova, criar um wrapper que chama a original
+- **Feature flags**: Para mudanças que afetam fluxos existentes, usar flags de configuração para ativar/desativar o comportamento novo
+
+### Checklist Antes de Alterar Código Existente
+
+Antes de modificar qualquer arquivo que já existe e funciona, verificar:
+- [ ] A alteração é **estritamente necessária** para a feature? Ou posso criar algo novo?
+- [ ] A alteração **preserva compatibilidade** com todos os endpoints/serviços que já usam esse código?
+- [ ] A alteração **não muda comportamento** de funcionalidades existentes?
+- [ ] Se for uma correção de bug, a mudança é **cirúrgica e isolada**?
+
+> **Regra de ouro**: Se o código existente funciona e a feature nova pode ser implementada sem tocá-lo, **não toque**.
+
 ## Convenções de Código
 
 ### Idioma
@@ -83,6 +118,20 @@ Todas em `src/domain/entities/`, implementadas como **dataclasses** (não Pydant
 - Dependency Injection via `Depends()` com factories `@lru_cache` em `dependencies.py`
 - Versionamento em `/api/v1/`
 - Paths públicos sem API key: `/health`, `/docs`, `/redoc`, `/openapi.json`, `/`
+
+### Swagger / Documentação OpenAPI (OBRIGATÓRIO)
+
+Toda alteração na API **deve** ser refletida no Swagger (`/docs` e `/redoc`). Ao criar ou modificar endpoints:
+
+1. **Tabela de endpoints no `main.py`**: Atualizar a `description` do `FastAPI(...)` em `create_app()` para incluir o novo endpoint na tabela Markdown correspondente
+2. **Tags OpenAPI**: Adicionar entrada em `openapi_tags` no `create_app()` se o endpoint pertence a um grupo novo (ex: `CAR`)
+3. **`summary` e `description`** no decorator `@router.post()`/`@router.get()`: Todo endpoint deve ter `summary` (título curto) e `description` (explicação detalhada)
+4. **`response_model`**: Sempre declarar o schema Pydantic de retorno — isso gera a documentação automática do response
+5. **`responses`**: Declarar status codes de erro com `model` para que apareçam no Swagger (ex: `422`, `502`, `504`)
+6. **Exemplos nos schemas**: Usar `json_schema_extra.examples` e `Field(examples=[...])` nos schemas Pydantic para gerar exemplos visíveis no Swagger
+7. **Docstring da função**: A docstring do handler aparece como descrição expandida no Swagger — manter clara e informativa
+
+> **Regra**: Se o endpoint não aparece corretamente no Swagger com descrição, exemplos e status codes, a feature **não está completa**.
 
 ### Async e Threading
 - Todo I/O de rede é async/await (httpx, FastAPI)
@@ -194,15 +243,17 @@ resultado = await loop.run_in_executor(None, self._operacao_sync_playwright)
 
 ## Estrutura de Arquivos para Novos Endpoints
 
-Ao criar um novo endpoint, seguir esta sequência:
+Ao criar um novo endpoint, seguir esta sequência — **criando arquivos novos sempre que possível, sem alterar os existentes**:
 
-1. **Domain**: Criar entidades/enums em `src/domain/entities/` e interfaces em `src/domain/interfaces/`
-2. **Infrastructure**: Implementar adaptadores em `src/infrastructure/`
-3. **Service**: Criar service em `src/services/` orquestrando domain + infrastructure
-4. **Schema**: Criar request/response models em `src/api/v1/schemas.py`
-5. **Route**: Criar arquivo em `src/api/v1/routes/` com `APIRouter`
-6. **Dependencies**: Registrar factory com `@lru_cache` em `src/api/v1/dependencies.py`
-7. **Router**: Incluir sub-router no `src/api/v1/__init__.py`
+1. **Domain**: Criar entidades/enums em **novos arquivos** dentro de `src/domain/entities/` e interfaces em `src/domain/interfaces/` — não editar entidades existentes
+2. **Infrastructure**: Implementar adaptadores em **novo módulo** dentro de `src/infrastructure/` — não modificar adaptadores existentes
+3. **Service**: Criar **novo service** em `src/services/` orquestrando domain + infrastructure — não adicionar métodos em services existentes a menos que seja a mesma responsabilidade
+4. **Schema**: Criar request/response models — preferencialmente em arquivo de schemas dedicado se `schemas.py` estiver grande. Nunca alterar schemas existentes usados por outros endpoints
+5. **Route**: Criar **novo arquivo** em `src/api/v1/routes/` com `APIRouter` — não adicionar rotas em arquivos de rotas existentes de outro domínio
+6. **Dependencies**: **Apenas adicionar** nova factory com `@lru_cache` em `src/api/v1/dependencies.py` — não alterar factories existentes
+7. **Router**: **Apenas adicionar** `include_router()` no `src/api/v1/__init__.py` — não alterar rotas existentes
+
+> **Impacto esperado em arquivos existentes**: Apenas adições mínimas em `__init__.py` (exports), `dependencies.py` (nova factory) e router principal (novo `include_router`). Nenhuma modificação de lógica existente.
 
 ## Infraestrutura & Deploy
 
@@ -359,6 +410,18 @@ mypy src/                                # Type check
 ```
 
 ## Não Fazer
+
+### Impacto Mínimo (Proteção do Código Existente)
+- **Não alterar funções/classes existentes** para implementar features novas — criar novas em vez de modificar
+- **Não refatorar** código funcional junto com uma feature nova — refatoração é tarefa separada
+- **Não renomear** arquivos, módulos, classes ou funções existentes sem pedido explícito
+- **Não mudar assinaturas** de funções públicas existentes — adicionar parâmetros opcionais ou criar funções novas
+- **Não reorganizar** imports, estrutura de pastas ou ordem de código em arquivos existentes
+- **Não remover** código existente (mesmo que pareça não usado) sem confirmação — pode ter dependentes não óbvios
+- **Não alterar schemas/dataclasses** que já servem endpoints em produção — criar novos se necessário
+- **Não modificar** configuração global (middlewares, exception handlers, CORS, DI) para atender uma feature específica
+
+### Código e Arquitetura
 - Não colocar lógica de negócio em routes — delegar para Services
 - Não usar `import *`
 - Não acessar infraestrutura diretamente nos Services — usar interfaces de Domain

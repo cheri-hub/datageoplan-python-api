@@ -102,12 +102,21 @@ X-API-Key: sua-api-key
 | GET | `/arquivo/csv/{codigo}/{tipo}` | Download CSV (parcela/vertices/limites) |
 | GET | `/arquivo/todos/{codigo}` | Download ZIP completo |
 
-### SICAR (`/api/sicar`)
+### SICAR / CAR (`/api/sicar` e `/api/car`)
 | Método | Endpoint | Descrição |
 |--------|----------|-----------|
-| POST | `/stream/state` | Download shapefile por estado |
-| POST | `/stream/car` | Download shapefile por CAR |
-| GET | `/info` | Informações dos endpoints |
+| POST | `/sicar/stream/state` | Download shapefile por estado |
+| POST | `/sicar/stream/car` | Download shapefile por CAR |
+| POST | `/sicar/stream/state/processed` | Download shapefile processado por estado |
+| POST | `/sicar/stream/car/processed` | Download shapefile de CAR processado |
+| GET | `/sicar/info` | Informações dos endpoints |
+| GET | `/sicar/temas` | Lista grupos de temas CAR |
+| GET | `/sicar/temas/{grupo}` | Lista temas de um grupo específico |
+| GET | `/sicar/sld/{tema}` | Gera SLD para um tema |
+| GET | `/sicar/cores` | Paleta de cores dos temas CAR |
+| GET | `/sicar/consulta/{car_code}` | Consulta dados do registro CAR |
+| GET | `/sicar/consulta/{car_code}/pdf` | PDF do demonstrativo CAR |
+| POST | `/car/bbox` | Consulta CARs por BBox (UF auto-detectada) |
 
 ## 🚀 Exemplo
 
@@ -144,8 +153,16 @@ curl -X POST http://localhost:8000/api/sicar/stream/state \\
                 "description": "Download de arquivos CSV do SIGEF INCRA",
             },
             {
+                "name": "SICAR",
+                "description": "Download, processamento e consulta de dados do Sistema de Cadastro Ambiental Rural (SICAR/CAR)",
+            },
+            {
                 "name": "Health",
                 "description": "Verificação de saúde da aplicação",
+            },
+            {
+                "name": "Info",
+                "description": "Informações gerais da API",
             },
         ],
     )

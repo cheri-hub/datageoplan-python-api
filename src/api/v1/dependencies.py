@@ -114,6 +114,22 @@ def get_sigef_service() -> SigefService:
     )
 
 
+# ============== CAR BBox ==============
+
+@lru_cache
+def get_car_wfs_client() -> "CarWfsClient":
+    """Retorna cliente WFS do GeoServer SICAR (singleton)."""
+    from src.infrastructure.car_wfs import CarWfsClient
+    return CarWfsClient()
+
+
+@lru_cache
+def get_car_bbox_service() -> "CarBboxService":
+    """Retorna serviço de consulta CAR por BBox (singleton)."""
+    from src.services.car_bbox_service import CarBboxService
+    return CarBboxService(wfs_client=get_car_wfs_client())
+
+
 # ============== Reset (para testes) ==============
 
 def reset_dependencies() -> None:
@@ -123,3 +139,5 @@ def reset_dependencies() -> None:
     get_sigef_client.cache_clear()
     get_auth_service.cache_clear()
     get_sigef_service.cache_clear()
+    get_car_wfs_client.cache_clear()
+    get_car_bbox_service.cache_clear()
