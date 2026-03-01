@@ -101,6 +101,7 @@ X-API-Key: sua-api-key
 |--------|----------|-----------|
 | GET | `/arquivo/csv/{codigo}/{tipo}` | Download CSV (parcela/vertices/limites) |
 | GET | `/arquivo/todos/{codigo}` | Download ZIP completo |
+| POST | `/bbox` | Consulta parcelas INCRA por BBox (GeoOne WFS) |
 
 ### SICAR / CAR (`/api/sicar` e `/api/car`)
 | Método | Endpoint | Descrição |
@@ -150,7 +151,7 @@ curl -X POST http://localhost:8000/api/sicar/stream/state \\
             },
             {
                 "name": "SIGEF",
-                "description": "Download de arquivos CSV do SIGEF INCRA",
+                "description": "Download de arquivos CSV do SIGEF INCRA e consulta de parcelas por BBox via GeoOne WFS",
             },
             {
                 "name": "SICAR",

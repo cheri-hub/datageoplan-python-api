@@ -18,6 +18,13 @@ from src.domain.entities.car_bbox import (
     UF_BBOXES,
     detectar_ufs_por_bbox,
 )
+from src.domain.entities.incra_wfs import (
+    CamadaIncra,
+    StatusCertificacao,
+    CAMADA_LAYER_MAP,
+    CAMADA_DESCRICAO,
+    UF_ID_PARA_SIGLA,
+)
 
 __all__ = [
     # Session
@@ -37,4 +44,10 @@ __all__ = [
     "TipoImovelSicar",
     "UF_BBOXES",
     "detectar_ufs_por_bbox",
+    # INCRA WFS (GeoOne)
+    "CamadaIncra",
+    "StatusCertificacao",
+    "CAMADA_LAYER_MAP",
+    "CAMADA_DESCRICAO",
+    "UF_ID_PARA_SIGLA",
 ]

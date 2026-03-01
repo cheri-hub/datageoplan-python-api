@@ -130,6 +130,22 @@ def get_car_bbox_service() -> "CarBboxService":
     return CarBboxService(wfs_client=get_car_wfs_client())
 
 
+# ============== INCRA BBox (GeoOne) ==============
+
+@lru_cache
+def get_geoone_wfs_client() -> "GeoOneWfsClient":
+    """Retorna cliente WFS do GeoOne GeoINCRA (singleton)."""
+    from src.infrastructure.geoone_wfs import GeoOneWfsClient
+    return GeoOneWfsClient()
+
+
+@lru_cache
+def get_incra_bbox_service() -> "IncraBboxService":
+    """Retorna serviço de consulta INCRA por BBox (singleton)."""
+    from src.services.incra_bbox_service import IncraBboxService
+    return IncraBboxService(wfs_client=get_geoone_wfs_client())
+
+
 # ============== Reset (para testes) ==============
 
 def reset_dependencies() -> None:
@@ -141,3 +157,5 @@ def reset_dependencies() -> None:
     get_sigef_service.cache_clear()
     get_car_wfs_client.cache_clear()
     get_car_bbox_service.cache_clear()
+    get_geoone_wfs_client.cache_clear()
+    get_incra_bbox_service.cache_clear()
